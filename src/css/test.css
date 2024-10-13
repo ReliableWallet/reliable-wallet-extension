@@ -1,0 +1,16 @@
+.words-mnemonic {
+    display: flex;
+    flex-direction: row;
+}
+
+input {
+    padding: 10px;
+    margin: 10px;
+    font-size: 16px;
+  }
+  
+  img {
+    margin-top: 10px;
+    border: 2px solid #000;
+  }
+  
