@@ -98,7 +98,7 @@ const Create: React.FC = () => {
 
   return (
     <div className="container">
-      <div className='content'>
+      <div className='content-create'>
         <h1 className='h1-wallet-gen'>Create QURWallet</h1>
         {isButtonClicked && (<Alert message="Save that words and dont show for others" className='alert-gen' style={buttonStyles} icon={<ExclamationCircleFilled style={{ color: 'lightgrey' }} />} showIcon />)}
         {!isButtonClicked && (<Button className='customButton customButtonGen' color="default" variant="filled" style={buttonStyles} onClick={generateWallet}>Generate Wallet</Button>)}

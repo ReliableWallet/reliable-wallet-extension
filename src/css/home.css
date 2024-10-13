@@ -1,12 +1,11 @@
-html, body {
+html,
+body {
   padding: 0;
   margin: 0;
   background-color: black;
   width: 400px;
   height: 6000px;
 }
-
-
 
 /* Стили для контейнера */
 .container {
@@ -23,16 +22,9 @@ html, body {
   height: 600px;
 }
 
-/* Заголовок */
-.header {
-  font-size: 32px;
-  text-align: center;
-}
-
 /* Описание/подтекст */
 .subText {
   padding-top: 5em;
-
 
   font-size: 18px;
   text-align: center;
@@ -72,10 +64,16 @@ html, body {
   height: 10%;
   z-index: 9999;
   background-color: #282c34;
+  text-align: center;
+  align-content: center;
 
   border: 1px solid white;
 }
-  
+
+h1 {
+  margin: 0;
+  padding: 0;
+}
 
 .body {
   display: block;
