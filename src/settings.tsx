@@ -13,10 +13,15 @@ const Settings: React.FC = () => {
 
     return (
         <div className="container">
+            <header className="header">
+                <IconButton className="back-icon" style={{}} icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} onClick={() => navigate(-1)} />
+            </header>
 
-            <IconButton className="back-icon" style={{}} icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} onClick={() => navigate(-1)} />
-
-            <h1>SOON BLYAT</h1>
+            <div className="body">
+                <div className="content">
+                    <h1>SOON BLYAT</h1>
+                </div>
+            </div>
         </div>
     );
 }
