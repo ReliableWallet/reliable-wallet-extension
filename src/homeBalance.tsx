@@ -209,8 +209,9 @@ const WalletInfo: React.FC = () => {
 
       <div className='body'>
         <div className="content">
-          {avatarImage && <img src={avatarImage} alt="Avatar" />}
-
+          <div className="info-home">
+          {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
+          </div>
 
           {balanceETH !== null && (
             <Alert
