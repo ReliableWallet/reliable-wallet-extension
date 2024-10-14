@@ -19,7 +19,7 @@ const Settings: React.FC = () => {
 
             <div className="body">
                 <div className="content">
-                    <h1>SOON BLYAT</h1>
+                    <h1>SOON</h1>
                 </div>
             </div>
         </div>
