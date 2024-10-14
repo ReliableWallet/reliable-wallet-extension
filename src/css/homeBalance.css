@@ -15,7 +15,7 @@
     font-size: 14px;
 }
 
-.shortAdress-button {
+.shortAddress-button {
     position: absolute;
     top: 1em;
     left: 1em;
@@ -31,7 +31,7 @@
     transition: all 0.15s linear;
 }
 
-.shortAdress-button:hover {
+.shortAddress-button:hover {
     border-color: rgba(255, 192, 203, 0.3);
     background-color: rgba(255, 192, 203, 0.425);
     color: rgba(255, 192, 203, 0.8);
