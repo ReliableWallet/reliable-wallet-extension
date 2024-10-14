@@ -6,7 +6,7 @@ import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
-import { ExclamationCircleFilled } from '@ant-design/icons';
+import { CopyFilled } from '@ant-design/icons';
 import axios from 'axios';
 
 
@@ -21,8 +21,8 @@ const provider = new WebSocketProvider("wss://ethereum-sepolia-rpc.publicnode.co
 const WalletInfo: React.FC = () => {
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
-  const [adress, setAdress] = useState<string | null>(null);
-  const [ShortAdress, setShortAdress] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
+  const [ShortAddress, setShortAddress] = useState<string | null>(null);
   const [balanceETH, setBalanceETH] = useState<string | null>(null);
   const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -46,9 +46,9 @@ const WalletInfo: React.FC = () => {
   }
 
   // Функция для получения адреса из приватного ключа
-  async function getAdressFromPrivateKey(privateKey: string) {
+  async function getAddressFromPrivateKey(privateKey: string) {
     const wallet = new Wallet(privateKey);
-    setAdress(wallet.address);
+    setAddress(wallet.address);
     return wallet.address;
   }
 
@@ -120,6 +120,13 @@ const WalletInfo: React.FC = () => {
     }
   }
 
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(address);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  }
 
   // mnemonic
   useEffect(() => {
@@ -151,16 +158,16 @@ const WalletInfo: React.FC = () => {
   // address
   useEffect(() => {
     if (privateKey) {
-      getAdressFromPrivateKey(privateKey).then(address => setAdress(address));
+      getAddressFromPrivateKey(privateKey).then(address => setAddress(address));
     }
   }, [privateKey]);
 
   // short addres
   useEffect(() => {
-    if (adress) {
-      shortenAddress(adress).then(ShortAdress => setShortAdress(ShortAdress));
+    if (address) {
+      shortenAddress(address).then(ShortAddress => setShortAddress(ShortAddress));
     }
-  }, [adress]);
+  }, [address]);
 
 
   // avatar
@@ -170,15 +177,15 @@ const WalletInfo: React.FC = () => {
     const savedAvatar = localStorage.getItem('walletAvatar');
     if (savedAvatar && savedAvatar && savedAvatar.length > 240) {
       setAvatarImage(savedAvatar);
-    } else if (adress) {
+    } else if (address) {
       console.log("ahuets")
       // Если аватарки в localStorage нет, генерируем новую
-      getAvatarFromAddress(adress).then(avatarUrl => {
+      getAvatarFromAddress(address).then(avatarUrl => {
         localStorage.setItem('walletAvatar', avatarUrl); // Сохраняем аватар в localStorage
         setAvatarImage(avatarUrl); // Обновляем состояние компонента
       });
     }
-  }, [adress]);
+  }, [address]);
 
   const handleClick = () => {
     navigate('/settings')
@@ -188,7 +195,7 @@ const WalletInfo: React.FC = () => {
     <div className='container'>
 
       <header className='header'>
-        <button>{ShortAdress}</button>
+        <button className='shortAddress-button' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'}/> {ShortAddress}</button>
 
 
         <IconButton
@@ -210,7 +217,7 @@ const WalletInfo: React.FC = () => {
               message={`Баланс: ${balanceETH} ETH (~${balanceUSD} USD)`}
               type="success"
               showIcon
-              icon={<ExclamationCircleFilled />}
+              // icon={<CopyFilled />}
             />
           )}
 
