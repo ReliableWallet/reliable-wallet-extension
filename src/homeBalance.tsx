@@ -6,7 +6,7 @@ import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
-import { CopyFilled } from '@ant-design/icons';
+import { CopyFilled, ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 
@@ -127,6 +127,13 @@ const WalletInfo: React.FC = () => {
       console.error('Failed to copy: ', err);
     }
   }
+  
+  async function getMnemonic() {
+    const mnemonic = localStorage.getItem('walletMnemonic');
+    if (mnemonic) {
+      setMnemonic(mnemonic);
+    }
+  }
 
   // mnemonic
   useEffect(() => {
@@ -154,6 +161,15 @@ const WalletInfo: React.FC = () => {
         });
     }
   }, [mnemonic]);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (mnemonic) {
+        await checkBalance();
+      }
+    };
+    fetchBalance();
+  });
 
   // address
   useEffect(() => {
@@ -207,29 +223,29 @@ const WalletInfo: React.FC = () => {
         />
       </header>
 
+      
+
       <div className='body'>
         <div className="content">
           <div className="info-home">
+          
           {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
-          </div>
+          
 
           {balanceETH !== null && (
-            <Alert
-              message={`Баланс: ${balanceETH} ETH (~${balanceUSD} USD)`}
-              type="success"
-              showIcon
-              // icon={<CopyFilled />}
-            />
+            <span className='balance-home'>${balanceUSD}</span>
           )}
+          
 
           <Button
-            type="primary"
+            type="default"
             onClick={checkBalance}
             loading={loading}
-            style={{ marginTop: '16px' }}
-          >
-            Проверить баланс
-          </Button>
+            variant='filled'
+            className='checkBalanceButton-home'
+            icon={<ReloadOutlined />}
+          ></Button>
+          </div>
         </div>
 
       </div>

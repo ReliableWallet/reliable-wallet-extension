@@ -45,10 +45,35 @@
     display: flex;
     top: 0em;
     left: 1em;
-    /* margin: 0 auto; */
+    justify-content: start;
+    text-align: center;
+    align-items: center;
     padding: 10px;
     width: 80%;
 
     border: 1px solid pink;
     border-radius: 10px;
+}
+
+.balance-home {
+    display: flex;
+    padding: 0 10px;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+
+    text-align: start;
+    /* width: 45%; */
+    height: 100%;
+
+}
+
+.checkBalanceButton-home {
+    background: rgba(255, 192, 203, 0.825) !important; 
+    border: none;
+}
+
+.checkBalanceButton-home:hover{
+    color: black !important;
+    background: rgba(255, 192, 203, 0.625) !important; 
 }
