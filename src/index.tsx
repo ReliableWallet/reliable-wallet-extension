@@ -7,6 +7,7 @@ import Create from './create';
 import Test from './test';
 import HomeBalance from './homeBalance';
 import Settings from './settings';
+import QrCode from './QrCode';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
@@ -20,6 +21,7 @@ root.render(
         <Route path="/test" element={<Test />} />
         <Route path="/HomeBalance" element={<HomeBalance />} />
         <Route path="/Settings" element={<Settings />} />
+        <Route path="/QrCode" element={<QrCode />} />
       </Routes>
     </HashRouter>
   </React.StrictMode>

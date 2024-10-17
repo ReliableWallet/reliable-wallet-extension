@@ -18,7 +18,15 @@
 .shortAddress-button {
     position: absolute;
     left: 1em;
+}
 
+.shortAddress-button:hover {
+    .copy-icon {
+        color: rgba(255, 192, 203, 0.8) !important;
+    }
+}
+
+.defaultButton {
     border: 2px solid pink;
     border-radius: 10px;
     background-color: transparent;
@@ -30,14 +38,10 @@
     transition: all 0.15s linear;
 }
 
-.shortAddress-button:hover {
-    border-color: rgba(255, 192, 203, 0.3);
-    background-color: rgba(255, 192, 203, 0.425);
-    color: rgba(255, 192, 203, 0.8);
-
-    .copy-icon {
-        color: rgba(255, 192, 203, 0.8);
-    }
+.defaultButton:hover {
+    border-color: rgba(255, 192, 203, 0.3) !important;
+    background-color: rgba(255, 192, 203, 0.425) !important;
+    color: rgba(255, 192, 203, 0.8) !important;
 }
 
 .info-home {
@@ -69,11 +73,11 @@
 }
 
 .checkBalanceButton-home {
-    background: rgba(255, 192, 203, 0.825) !important; 
+    background: rgba(255, 192, 203, 0.825) !important;
     border: none;
 }
 
-.checkBalanceButton-home:hover{
+.checkBalanceButton-home:hover {
     color: black !important;
-    background: rgba(255, 192, 203, 0.625) !important; 
+    background: rgba(255, 192, 203, 0.625) !important;
 }

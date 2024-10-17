@@ -6,7 +6,7 @@ import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
-import { CopyFilled, ReloadOutlined } from '@ant-design/icons';
+import { CopyFilled, QrcodeOutlined, ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 
@@ -162,6 +162,7 @@ const WalletInfo: React.FC = () => {
     }
   }, [mnemonic]);
 
+  // balance
   useEffect(() => {
     const fetchBalance = async () => {
       if (mnemonic) {
@@ -174,7 +175,10 @@ const WalletInfo: React.FC = () => {
   // address
   useEffect(() => {
     if (privateKey) {
-      getAddressFromPrivateKey(privateKey).then(address => setAddress(address));
+      getAddressFromPrivateKey(privateKey).then(address => {
+        setAddress(address)
+        localStorage.setItem('walletAddress', address);
+      });
     }
   }, [privateKey]);
 
@@ -203,20 +207,24 @@ const WalletInfo: React.FC = () => {
     }
   }, [address]);
 
-  const handleClick = () => {
+  const SettingsButton = () => {
     navigate('/settings')
+  }
+
+  const QrButton = () => {
+    navigate('/QrCode')
   }
 
   return (
     <div className='container'>
 
       <header className='header'>
-        <button className='shortAddress-button' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'}/> {ShortAddress}</button>
+        <button className='shortAddress-button defaultButton' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'}/> {ShortAddress}</button>
 
 
         <IconButton
           icon={FaGear}
-          onClick={handleClick}
+          onClick={SettingsButton}
           color="pink"
           size={24}
           className='settings-icon'
@@ -246,8 +254,15 @@ const WalletInfo: React.FC = () => {
             icon={<ReloadOutlined />}
           ></Button>
           </div>
-        </div>
 
+          <Button
+          type='default'
+          onClick={QrButton}
+          className='qrButton-home'
+          icon={<QrcodeOutlined />}></Button>
+
+
+        </div>
       </div>
     </div>
   );
