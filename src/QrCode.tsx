@@ -3,10 +3,10 @@ import AdvancedQRCode from './libs/QRCodeGenerator';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from './libs/IconButton';
-import { Button } from 'antd';
+import { Button, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 
 import "./css/qrcode.css";
-import { CopyOutlined } from '@ant-design/icons';
 
 const QrCode: React.FC = () => {
     const logo = require('./img/icon.webp');
@@ -17,13 +17,18 @@ const QrCode: React.FC = () => {
 
     useEffect(() => {
         setWalletAddress(localStorage.getItem('walletAddress'));
-
     }, []);
-
 
     useEffect(() => {
         setAvatarImage(localStorage.getItem('walletAvatar'));
-    })
+    });
+
+    // Настроим контейнер для сообщений
+    useEffect(() => {
+        message.config({
+            getContainer: () => document.querySelector('.message-container') || document.body,
+        });
+    }, []);
 
     return (
         <div className='container'>
@@ -36,7 +41,9 @@ const QrCode: React.FC = () => {
             </header>
 
             <div className="body">
+
                 <div className="content">
+                    <div className="message-container"></div>
                     <AdvancedQRCode
                         value={walletAddress}
                         logoUrl={logo}
@@ -46,7 +53,7 @@ const QrCode: React.FC = () => {
                         fgColor="black"
                         qrStyle="dots"
                         eyeRadius={2}
-                        eyeColor="balck"
+                        eyeColor="black"
                         style={{
                             borderRadius: '20px',
                         }}
@@ -55,13 +62,21 @@ const QrCode: React.FC = () => {
                         <span className='address-qrcode'>{walletAddress}</span>
                         <Button
                             className='copyButton-qrcode defaultButton'
-                            onClick={() => navigator.clipboard.writeText(walletAddress)}
+                            onClick={() => {
+                                message.success({
+                                    content: 'Copied to clipboard',
+                                    className: 'messageSuccess-qrcode',
+                                });
+                                navigator.clipboard.writeText(walletAddress);
+                            }}
                             icon={<CopyOutlined style={{ fill: 'pink' }} size={24} />}
                         >Copy Address</Button>
+
                     </div>
                 </div>
             </div>
-            {/* <input type="address" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} /> */}
+
+            <div className="message-container"></div>
         </div>
     );
 };

@@ -1,7 +1,7 @@
 .avatar-qrcode {
-position: absolute;
-display: flex;
-right: 1em;
+    position: absolute;
+    display: flex;
+    right: 1em;
 }
 
 .copyButton-qrcode {
@@ -19,7 +19,16 @@ right: 1em;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    
+
     margin: 25px;
     width: 80%;
+}
+
+.message-container {
+    position: absolute;
+    top: 1%;
+    transform: translate(0%, -50%);
+    width: 100%;
+    border-radius: 10px;
+
 }
