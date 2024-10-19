@@ -47,6 +47,7 @@
 .info-home {
     position: absolute;
     display: flex;
+    flex-wrap: wrap ;
     top: 0em;
     left: 1em;
     justify-content: start;
@@ -72,12 +73,30 @@
 
 }
 
-.checkBalanceButton-home {
+.button-home {
     background: rgba(255, 192, 203, 0.825) !important;
     border: none;
 }
 
-.checkBalanceButton-home:hover {
+.button-home:hover {
     color: black !important;
     background: rgba(255, 192, 203, 0.625) !important;
+}
+
+.important-home {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.buttonNav-home {
+    position: relative;
+    display: flex;
+    width: 100%;
+
+    margin-top: 20px;
+}
+
+.qrButton-home {
+    border-radius: 10px;
 }

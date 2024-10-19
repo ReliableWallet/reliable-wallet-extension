@@ -1,68 +1,122 @@
-// import React, { useState, useEffect } from 'react';
-// import blockies from 'ethereum-blockies';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Typography, Button, Select } from 'antd';
+import { ethers, Wallet, WebSocketProvider } from "ethers";
+import axios from 'axios';
 
-// import './css/create.css';
-// import { Address } from 'ethereumjs-util';
+const { Title, Text } = Typography;
+const { Option } = Select;
 
-// const Test: React.FC = () => {
-//   const [privateKey, setPrivateKey] = useState('');
-//   const [avatarImage, setAvatarImage] = useState<string | null>(null);
+const WalletInfo: React.FC = () => {
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [privateKey, setPrivateKey] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
+  const [ShortAddress, setShortAddress] = useState<string | null>(null);
+  const [balanceETH, setBalanceETH] = useState<string | null>(null);
+  const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [provider, setProvider] = useState<WebSocketProvider | null>(null); // Хранение провайдера
+  const [selectedProvider, setSelectedProvider] = useState<string>(""); // Выбранный провайдер
 
-//   useEffect(() => {
-//     if (privateKey) {
-//       // Генерация аватара с помощью blockies
-//       const avatar = blockies.create({ seed: privateKey, size: 8, scale: 8 }); // Настройки аватара
-//       const avatarUrl = avatar.toDataURL(); // Преобразование Canvas в Data URL
-//       setAvatarImage(avatarUrl);
-//     }
-//   }, [privateKey]);
+  const providersList = [
+    { name: "Ethereum Sepolia", url: "wss://ethereum-sepolia-rpc.publicnode.com" },
+    { name: "BSC Testnet", url: "wss://bsc-testnet-rpc.publicnode.com" },
+    { name: "BSC Pre-testnet", url: "https://data-seed-prebsc-1-s1.bnbchain.org:8545" },
+  ];
 
-//   return (
-//     <div className='container'>
-//       <input 
-//         type="text" 
-//         value={privateKey} 
-//         onChange={(e) => setPrivateKey(e.target.value)} 
-//         placeholder="Enter your private key"
-//       />
-//       <img src={avatarImage} alt="Avatar" />
-//     </div>
-//   );
-// };
+  const navigate = useNavigate();
 
-// export default Test;
+  // Функция для установки провайдера на основе выбора
+  const handleProviderChange = (value: string) => {
+    const selected = providersList.find(p => p.name === value);
+    if (selected) {
+      const newProvider = new WebSocketProvider(selected.url);
+      setProvider(newProvider);
+      setSelectedProvider(selected.name);
+    }
+  };
 
+  // Функция для проверки баланса ETH
+  async function checkBalance() {
+    setLoading(true);
+    try {
+      if (!mnemonic || !provider) {
+        throw new Error("Мнемоническая фраза или провайдер не найдены");
+      }
+      const privateKey = Wallet.fromPhrase(mnemonic).privateKey;
+      const wallet = new ethers.Wallet(privateKey, provider);
+      const balance = await provider.getBalance(wallet.address);
+      const balanceInEth = ethers.formatEther(balance);
+      setBalanceETH(balanceInEth);
+      const ethPrice = await getETHPrice();
+      setBalanceUSD((parseFloat(balanceInEth) * ethPrice).toFixed(2));
+    } catch (error) {
+      console.error("Ошибка при проверке баланса:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-import React, { useState } from 'react';
-import AdvancedQRCode from './libs/QRCodeGenerator';
+  // Получение цены ETH
+  async function getETHPrice() {
+    try {
+      const response = await axios.get('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
+      return response.data.USD;
+    } catch (error) {
+      console.error("Ошибка при получении курса ETH:", error);
+      return 0;
+    }
+  }
 
-const Test: React.FC = () => {
-  const logo = require('./img/icon.webp');
-  const [walletAddress, setWalletAddress] = useState('');
+  useEffect(() => {
+    const storedMnemonic = localStorage.getItem('walletMnemonic');
+    if (storedMnemonic) {
+      setMnemonic(storedMnemonic);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mnemonic && selectedProvider) {
+      checkBalance();
+    }
+  }, [mnemonic, provider]);
 
   return (
-    <div className='container' style={{ padding: '0px' }}>
-      <h1>QR Code Generator</h1>
+    <div className='container'>
+      <div className='header'>
+        <Title>Выберите провайдера сети</Title>
+        <Select
+          value={selectedProvider}
+          style={{ width: 250 }}
+          onChange={handleProviderChange}
+        >
+          {providersList.map((prov) => (
+            <Option key={prov.url} value={prov.name}>
+              {prov.name}
+            </Option>
+          ))}
+        </Select>
+      </div>
 
-      <AdvancedQRCode
-        value={walletAddress}
-        logoUrl={logo}
-        logoPaddingStyle="square"
-        size={180}
-        bgColor="white"
-        fgColor="black"
-        qrStyle="dots"
-        eyeRadius={2}
-        eyeColor="balck"
-        style={{
-          borderRadius: '20px',
-        }}
-      
-      />
-
-      <input type="address" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} />
+      <div className='body'>
+        <div className="content">
+          <div className="info-home">
+            <div className="important-home">
+              {balanceETH !== null && (
+                <span className='balance-home'>Баланс: {balanceETH} ETH (${balanceUSD})</span>
+              )}
+              <Button
+                type="default"
+                onClick={checkBalance}
+                loading={loading}
+                className='checkBalanceButton-home'
+              >Обновить баланс</Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default Test;
+export default WalletInfo;

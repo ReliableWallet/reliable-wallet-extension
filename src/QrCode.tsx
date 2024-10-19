@@ -41,7 +41,6 @@ const QrCode: React.FC = () => {
             </header>
 
             <div className="body">
-
                 <div className="content">
                     <div className="message-container"></div>
                     <AdvancedQRCode
@@ -65,7 +64,8 @@ const QrCode: React.FC = () => {
                             onClick={() => {
                                 message.success({
                                     content: 'Copied to clipboard',
-                                    className: 'messageSuccess-qrcode',
+                                    duration: 1.5,
+                                    // className: 'messageSuccess-qrcode',
                                 });
                                 navigator.clipboard.writeText(walletAddress);
                             }}
@@ -75,8 +75,6 @@ const QrCode: React.FC = () => {
                     </div>
                 </div>
             </div>
-
-            <div className="message-container"></div>
         </div>
     );
 };

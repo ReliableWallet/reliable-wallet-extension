@@ -4,6 +4,8 @@ import { Button, Row, Col, Input, Alert } from 'antd';
 import { ExclamationCircleFilled } from '@ant-design/icons';
 
 import './css/create.css';
+import { FaArrowLeftLong } from 'react-icons/fa6';
+import IconButton from './libs/IconButton';
 
 const Create: React.FC = () => {
   const [walletInfo, setWalletInfo] = useState<any>(null);
@@ -98,59 +100,68 @@ const Create: React.FC = () => {
 
   return (
     <div className="container">
-      <div className='content-create'>
-        <h1 className='h1-wallet-gen'>Create QURWallet</h1>
-        {isButtonClicked && (<Alert message="Save that words and dont show for others" className='alert-gen' style={buttonStyles} icon={<ExclamationCircleFilled style={{ color: 'lightgrey' }} />} showIcon />)}
-        {!isButtonClicked && (<Button className='customButton customButtonGen' color="default" variant="filled" style={buttonStyles} onClick={generateWallet}>Generate Wallet</Button>)}
-      </div>
-      {error && <p className="error">Error: {error}</p>}
+      <header className="header">
+      <IconButton className="back-icon" style={{}} icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} onClick={() => navigate(-1)} />
 
-      {walletInfo && (
-        <div className='wallet-info'>
-          <p className="p-mnemonic">Mnemonic:</p>
-          <PhraseDisplay
-            mnemonic={walletInfo.mnemonic}
-            disabledIndexes={disabledIndexes}
-            userInputs={userInputs}
-            handleInputChange={handleInputChange}
-            isTestMode={isTestMode}
-          />
-          {isButtonClicked && !isTestMode && (
-            <Button
-              className="customButton customButtonCopy"
-              color="default"
-              variant="filled"
-              style={buttonStyles}
-              onClick={copyToClipboard}
-            >
-              Copy
-            </Button>
-          )}
-          {isButtonClicked && !isTestMode && (
-            <Button
-              className="customButton customButtonNext"
-              color="default"
-              variant="filled"
-              style={{ ...buttonStyles, ...(copySuccess === '' ? { color: 'grey', borderColor: 'grey' } : {}) }}
-              disabled={copySuccess === ''}
-              onClick={MnemonicTest}
-            >
-              Next
-            </Button>
-          )}
-          {isTestMode && isAllCorrect && (
-            <Button
-              className="customButton customButtonNext"
-              color="default"
-              variant="filled"
-              style={buttonStyles}
-              onClick={handleNextAfterTest}
-            >
-              Next
-            </Button>
+        <h1 className='h1-wallet-gen'>Create QURWallet</h1>
+      </header>
+
+      <div className="body">
+        <div className="content">
+          <div className='content-create'>
+            {isButtonClicked && (<Alert message="Save that words and dont show for others" className='alert-gen' style={buttonStyles} icon={<ExclamationCircleFilled style={{ color: 'lightgrey' }} />} showIcon />)}
+            {!isButtonClicked && (<Button className='customButton customButtonGen' color="default" variant="filled" style={buttonStyles} onClick={generateWallet}>Generate Wallet</Button>)}
+          </div>
+          {error && <p className="error">Error: {error}</p>}
+
+          {walletInfo && (
+            <div className='wallet-info'>
+              <p className="p-mnemonic">Mnemonic:</p>
+              <PhraseDisplay
+                mnemonic={walletInfo.mnemonic}
+                disabledIndexes={disabledIndexes}
+                userInputs={userInputs}
+                handleInputChange={handleInputChange}
+                isTestMode={isTestMode}
+              />
+              {isButtonClicked && !isTestMode && (
+                <Button
+                  className="customButton customButtonCopy"
+                  color="default"
+                  variant="filled"
+                  style={buttonStyles}
+                  onClick={copyToClipboard}
+                >
+                  Copy
+                </Button>
+              )}
+              {isButtonClicked && !isTestMode && (
+                <Button
+                  className="customButton customButtonNext"
+                  color="default"
+                  variant="filled"
+                  style={{ ...buttonStyles, ...(copySuccess === '' ? { color: 'grey', borderColor: 'grey' } : {}) }}
+                  disabled={copySuccess === ''}
+                  onClick={MnemonicTest}
+                >
+                  Next
+                </Button>
+              )}
+              {isTestMode && isAllCorrect && (
+                <Button
+                  className="customButton customButtonNext"
+                  color="default"
+                  variant="filled"
+                  style={buttonStyles}
+                  onClick={handleNextAfterTest}
+                >
+                  Next
+                </Button>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

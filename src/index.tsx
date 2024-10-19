@@ -8,6 +8,7 @@ import Test from './test';
 import HomeBalance from './homeBalance';
 import Settings from './settings';
 import QrCode from './QrCode';
+import Networks from './settingsList/networks';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
@@ -22,6 +23,7 @@ root.render(
         <Route path="/HomeBalance" element={<HomeBalance />} />
         <Route path="/Settings" element={<Settings />} />
         <Route path="/QrCode" element={<QrCode />} />
+        <Route path="/Networks" element={<Networks />} />
       </Routes>
     </HashRouter>
   </React.StrictMode>

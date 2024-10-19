@@ -1,4 +1,33 @@
-.title-settings {
-    
+.colums-settings {
+    justify-content: flex-start;
+}
+
+.main-settings {
+    /* border: 1px solid pink;
+    border-radius: 15px; */
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 80%;
+    text-align: center;
+    margin: 10px 0px;
+}
+
+.mainButton-settings {
+    border: 1px solid pink !important; 
+    border-radius: 15px !important; 
+    margin: 5px 0px !important; 
+    background: transparent !important;
+    color: white !important;
+    padding: 0px;
+    max-height: 48px;
+}
+
+.mainButton-settings:hover {
+    background: rgba(255, 192, 203, 0.325) !important;
+}
+
+.h3-settings {
     font-weight: 400;
 }

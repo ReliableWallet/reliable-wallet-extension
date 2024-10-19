@@ -4,6 +4,7 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import IconButton from "./libs/IconButton";
 
 import './css/settings.css';
+import { Button } from "antd";
 
 
 const Settings: React.FC = () => {
@@ -20,8 +21,22 @@ const Settings: React.FC = () => {
             </header>
 
             <div className="body">
-                <div className="content">
-                    <h1>SOON</h1>
+                <div className="content colums-settings">
+
+                    <div className="main-settings">
+                        <Button 
+                        className="mainButton-settings"
+                        onClick={() => navigate('/networks')}
+                        ><h3 className="h3-settings">Networks</h3>
+                        </Button>
+                        <Button className="mainButton-settings"
+                        ><h3 className="h3-settings">soon...</h3>
+                        </Button>
+                        <Button className="mainButton-settings"
+                        ><h3 className="h3-settings">soon...</h3>
+                        </Button>
+                    </div>
+
                 </div>
             </div>
         </div>

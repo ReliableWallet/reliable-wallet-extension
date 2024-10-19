@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Alert, Button, Avatar } from 'antd';
+import { Typography, Alert, Button, Avatar, message } from 'antd';
 import { ethers, Wallet, WebSocketProvider } from "ethers";
 import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
@@ -15,7 +15,8 @@ import './css/homeBalance.css';
 const { Title, Text } = Typography;
 
 // WebSocket провайдер для подключения к сети Ethereum (Sepolia)
-const provider = new WebSocketProvider("wss://ethereum-sepolia-rpc.publicnode.com");
+// const provider = new WebSocketProvider("wss://ethereum-sepolia-rpc.publicnode.com");
+// const provider = new WebSocketProvider("wss://bsc-testnet-rpc.publicnode.com");
 // const provider = new WebSocketProvider("https://data-seed-prebsc-1-s1.bnbchain.org:8545");
 
 const WalletInfo: React.FC = () => {
@@ -27,7 +28,7 @@ const WalletInfo: React.FC = () => {
   const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
-
+  const [provider, setProvider] = useState<WebSocketProvider | null>(null);
 
   const navigate = useNavigate();
 
@@ -73,16 +74,24 @@ const WalletInfo: React.FC = () => {
     return avatarUrl;
   }
 
-  // Функция для получения цены ETH из CryptoCompare
+
+    // Функция для получения и установки провайдера из localStorage
+    const setUserProviderFromLocalStorage = () => {
+      const storedProvider = localStorage.getItem('userProvider');
+      const defaultProvider = "wss://ethereum-sepolia-rpc.publicnode.com"; // Sepolia по умолчанию
+      const providerUrl = storedProvider || defaultProvider;
+      const newProvider = new WebSocketProvider(providerUrl);
+      setProvider(newProvider);
+    };
+
+  // Получение цены ETH
   async function getETHPrice() {
     try {
-      const response = await axios.get(
-        'https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD'
-      );
+      const response = await axios.get('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
       return response.data.USD;
     } catch (error) {
       console.error("Ошибка при получении курса ETH:", error);
-      throw error;
+      return 0;
     }
   }
 
@@ -90,31 +99,18 @@ const WalletInfo: React.FC = () => {
   async function checkBalance() {
     setLoading(true);
     try {
-      if (!mnemonic) {
-        throw new Error("Мнемоническая фраза не найдена");
+      if (!mnemonic || !provider) {
+        throw new Error("Мнемоническая фраза или провайдер не найдены");
       }
-
-      // Получаем приватный ключ из мнемонической фразы
-      const privateKey = await getPrivateKeyFromMnemonic(mnemonic);
-      localStorage.setItem('walletPrivateKey', privateKey);
-
-      setPrivateKey(privateKey);
-
-      // Создаем кошелек с провайдером
+      const privateKey = Wallet.fromPhrase(mnemonic).privateKey;
       const wallet = new ethers.Wallet(privateKey, provider);
-
-      // Получаем баланс ETH
       const balance = await provider.getBalance(wallet.address);
       const balanceInEth = ethers.formatEther(balance);
       setBalanceETH(balanceInEth);
-
-      // Получаем цену ETH в USD
       const ethPrice = await getETHPrice();
-      const balanceInUsd = (parseFloat(balanceInEth) * ethPrice).toFixed(2);
-      setBalanceUSD(balanceInUsd);
+      setBalanceUSD((parseFloat(balanceInEth) * ethPrice).toFixed(2));
     } catch (error) {
       console.error("Ошибка при проверке баланса:", error);
-      // Добавьте здесь обработку ошибки, например, отображение сообщения пользователю
     } finally {
       setLoading(false);
     }
@@ -127,7 +123,7 @@ const WalletInfo: React.FC = () => {
       console.error('Failed to copy: ', err);
     }
   }
-  
+
   async function getMnemonic() {
     const mnemonic = localStorage.getItem('walletMnemonic');
     if (mnemonic) {
@@ -162,15 +158,25 @@ const WalletInfo: React.FC = () => {
     }
   }, [mnemonic]);
 
-  // balance
   useEffect(() => {
-    const fetchBalance = async () => {
-      if (mnemonic) {
-        await checkBalance();
-      }
-    };
-    fetchBalance();
-  });
+    // Установка провайдера при монтировании компонента
+    setUserProviderFromLocalStorage();
+  }, []);
+
+  // balance
+  // useEffect(() => {
+  //   const fetchBalance = async () => {
+  //     if (mnemonic) {
+  //       await checkBalance();
+  //     }
+  //   };
+  //   fetchBalance();
+  // });
+  useEffect(() => {
+    if (mnemonic && provider) {
+      checkBalance();
+    }
+  }, [mnemonic, provider]);
 
   // address
   useEffect(() => {
@@ -207,6 +213,12 @@ const WalletInfo: React.FC = () => {
     }
   }, [address]);
 
+  useEffect(() => {
+    message.config({
+      getContainer: () => document.querySelector('.message-container') || document.body,
+    });
+  }, []);
+
   const SettingsButton = () => {
     navigate('/settings')
   }
@@ -219,7 +231,7 @@ const WalletInfo: React.FC = () => {
     <div className='container'>
 
       <header className='header'>
-        <button className='shortAddress-button defaultButton' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'}/> {ShortAddress}</button>
+        <button className='shortAddress-button defaultButton' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'} /> {ShortAddress}</button>
 
 
         <IconButton
@@ -231,37 +243,42 @@ const WalletInfo: React.FC = () => {
         />
       </header>
 
-      
+
 
       <div className='body'>
         <div className="content">
+        <div className="message-container"></div>
           <div className="info-home">
-          
-          {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
-          
+            <div className="important-home">
+              {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
 
-          {balanceETH !== null && (
-            <span className='balance-home'>${balanceUSD}</span>
-          )}
-          
 
-          <Button
-            type="default"
-            onClick={checkBalance}
-            loading={loading}
-            variant='filled'
-            className='checkBalanceButton-home'
-            icon={<ReloadOutlined />}
-          ></Button>
+              {balanceETH !== null && (
+                <span className='balance-home'>${balanceUSD}</span>
+              )}
+
+
+              <Button
+                type="default"
+                onClick={checkBalance}
+                loading={loading}
+                variant='filled'
+                className='checkBalanceButton-home button-home'
+                icon={<ReloadOutlined />}
+              ></Button>
+            </div>
+
+            <div className="buttonNav-home">
+              <Button
+                type='default'
+                size='large'
+                onClick={QrButton}
+                className='qrButton-home button-home'
+                icon={<QrcodeOutlined />}>
+              </Button>
+
+            </div>
           </div>
-
-          <Button
-          type='default'
-          onClick={QrButton}
-          className='qrButton-home'
-          icon={<QrcodeOutlined />}></Button>
-
-
         </div>
       </div>
     </div>
