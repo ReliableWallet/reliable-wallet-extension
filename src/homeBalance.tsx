@@ -6,9 +6,10 @@ import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
-import { CopyFilled, QrcodeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { CopyFilled, DislikeOutlined, QrcodeOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
+import { ReactComponent as IconETH } from './img/Network.svg';
 
 import './css/homeBalance.css';
 
@@ -29,6 +30,7 @@ const WalletInfo: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [provider, setProvider] = useState<WebSocketProvider | null>(null);
+  const [activeTab, setActiveTab] = useState('tokens');
 
   const navigate = useNavigate();
 
@@ -75,14 +77,14 @@ const WalletInfo: React.FC = () => {
   }
 
 
-    // Функция для получения и установки провайдера из localStorage
-    const setUserProviderFromLocalStorage = () => {
-      const storedProvider = localStorage.getItem('userProvider');
-      const defaultProvider = "wss://ethereum-sepolia-rpc.publicnode.com"; // Sepolia по умолчанию
-      const providerUrl = storedProvider || defaultProvider;
-      const newProvider = new WebSocketProvider(providerUrl);
-      setProvider(newProvider);
-    };
+  // Функция для получения и установки провайдера из localStorage
+  const setUserProviderFromLocalStorage = () => {
+    const storedProvider = localStorage.getItem('userProvider');
+    const defaultProvider = "wss://ethereum-sepolia-rpc.publicnode.com"; // Sepolia по умолчанию
+    const providerUrl = storedProvider || defaultProvider;
+    const newProvider = new WebSocketProvider(providerUrl);
+    setProvider(newProvider);
+  };
 
   // Получение цены ETH
   async function getETHPrice() {
@@ -116,6 +118,7 @@ const WalletInfo: React.FC = () => {
     }
   }
 
+  // Функция для копирования адреса
   async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(address);
@@ -139,6 +142,30 @@ const WalletInfo: React.FC = () => {
       setMnemonic(storedMnemonic);
     }
   }, []);
+
+  // Функция для рендера контента в зависимости от выбранной вкладки
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'tokens':
+        return <div className="sectionTokens-home">
+          <div className="token">
+            <div className="IconName-home">
+              <IconETH width={35} height={35} /> 
+              <span>Ethereum</span>
+            </div>
+            
+            <span className='toketBalance-home'>{balanceETH} ETH</span>
+          </div>
+
+        </div>;
+      case 'nfts':
+        return <div className="sectionTokens-home">Content for NFT's</div>;
+      case 'history':
+        return <div className="sectionTokens-home">Transaction History</div>;
+      default:
+        return <div className="sectionTokens-home">Soon...</div>;
+    }
+  };
 
 
   // privateKey
@@ -247,38 +274,75 @@ const WalletInfo: React.FC = () => {
 
       <div className='body'>
         <div className="content">
-        <div className="message-container"></div>
-          <div className="info-home">
-            <div className="important-home">
-              {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
+          <div className="message-container"></div>
+
+          <div className="column-home">
+            <div className="info-home">
+              <div className="important-home">
+                {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
 
 
-              {balanceETH !== null && (
-                <span className='balance-home'>${balanceUSD}</span>
-              )}
+                {balanceETH !== null && (
+                  <span className='balance-home'>${balanceUSD}</span>
+                )}
 
 
+                <Button
+                  type="default"
+                  onClick={checkBalance}
+                  loading={loading}
+                  variant='filled'
+                  className='checkBalanceButton-home button-home'
+                  icon={<ReloadOutlined />}
+                ></Button>
+              </div>
+
+              <div className="buttonNav-home">
               <Button
-                type="default"
-                onClick={checkBalance}
-                loading={loading}
-                variant='filled'
-                className='checkBalanceButton-home button-home'
-                icon={<ReloadOutlined />}
-              ></Button>
+                  type='default'
+                  size='large'
+                  onClick={QrButton}
+                  className='qrButton-home button-home'
+                  icon={<DislikeOutlined />}>
+                </Button>
+                <Button
+                  type='default'
+                  size='large'
+                  onClick={QrButton}
+                  className='qrButton-home button-home'
+                  icon={<QrcodeOutlined />}>
+                </Button>
+                <Button
+                  type='default'
+                  size='large'
+                  onClick={QrButton}
+                  className='qrButton-home button-home'
+                  icon={<RetweetOutlined />}>
+                Swap</Button>
+              </div>
+            </div>
+            <div className="sectionBalance-home">
+
+              <Button className='balanceButton-home'
+                onClick={() => setActiveTab('tokens')}
+              >TOKENS</Button>
+              <Button className='balanceButton-home'
+                onClick={() => setActiveTab('nfts')}
+              >NFT's</Button>
+              <Button className='balanceButton-home'
+                onClick={() => setActiveTab('history')}
+              >History</Button>
+
             </div>
 
-            <div className="buttonNav-home">
-              <Button
-                type='default'
-                size='large'
-                onClick={QrButton}
-                className='qrButton-home button-home'
-                icon={<QrcodeOutlined />}>
-              </Button>
 
-            </div>
+            {renderContent()}
+            {/* <div className='sectionTokens-home'>
+              {renderContent()}
+            </div> */}
+
           </div>
+
         </div>
       </div>
     </div>
