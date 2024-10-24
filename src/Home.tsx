@@ -30,7 +30,7 @@ const WalletEntry: React.FC = () => {
     return (
         <div className="container">
             <header className="header">
-                <h1>Welcome to QURWAllet</h1>
+                <h1>Welcome to CryWallet</h1>
             </header>
 
             <div className="body">
