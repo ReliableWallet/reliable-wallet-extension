@@ -24,11 +24,10 @@
       ]
     }
   ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ]
+    "https://*.coingecko.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.coingecko.com"
+  }
 }

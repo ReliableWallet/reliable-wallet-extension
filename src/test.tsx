@@ -1,122 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Typography, Button, Select } from 'antd';
-import { ethers, Wallet, WebSocketProvider } from "ethers";
-import axios from 'axios';
+import { Typography, Spin } from 'antd';
+import { MultiChainWalletScanner } from './libs/scanner';
+import { TokenBalance } from './libs/types';
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+import './css/test.css';
 
-const WalletInfo: React.FC = () => {
-  const [mnemonic, setMnemonic] = useState<string | null>(null);
-  const [privateKey, setPrivateKey] = useState<string | null>(null);
-  const [address, setAddress] = useState<string | null>(null);
-  const [ShortAddress, setShortAddress] = useState<string | null>(null);
-  const [balanceETH, setBalanceETH] = useState<string | null>(null);
-  const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [provider, setProvider] = useState<WebSocketProvider | null>(null); // Хранение провайдера
-  const [selectedProvider, setSelectedProvider] = useState<string>(""); // Выбранный провайдер
+const { Title } = Typography;
 
-  const providersList = [
-    { name: "Ethereum Sepolia", url: "wss://ethereum-sepolia-rpc.publicnode.com" },
-    { name: "BSC Testnet", url: "wss://bsc-testnet-rpc.publicnode.com" },
-    { name: "BSC Pre-testnet", url: "https://data-seed-prebsc-1-s1.bnbchain.org:8545" },
-  ];
-
-  const navigate = useNavigate();
-
-  // Функция для установки провайдера на основе выбора
-  const handleProviderChange = (value: string) => {
-    const selected = providersList.find(p => p.name === value);
-    if (selected) {
-      const newProvider = new WebSocketProvider(selected.url);
-      setProvider(newProvider);
-      setSelectedProvider(selected.name);
-    }
-  };
-
-  // Функция для проверки баланса ETH
-  async function checkBalance() {
-    setLoading(true);
-    try {
-      if (!mnemonic || !provider) {
-        throw new Error("Мнемоническая фраза или провайдер не найдены");
-      }
-      const privateKey = Wallet.fromPhrase(mnemonic).privateKey;
-      const wallet = new ethers.Wallet(privateKey, provider);
-      const balance = await provider.getBalance(wallet.address);
-      const balanceInEth = ethers.formatEther(balance);
-      setBalanceETH(balanceInEth);
-      const ethPrice = await getETHPrice();
-      setBalanceUSD((parseFloat(balanceInEth) * ethPrice).toFixed(2));
-    } catch (error) {
-      console.error("Ошибка при проверке баланса:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Получение цены ETH
-  async function getETHPrice() {
-    try {
-      const response = await axios.get('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-      return response.data.USD;
-    } catch (error) {
-      console.error("Ошибка при получении курса ETH:", error);
-      return 0;
-    }
-  }
+const Test: React.FC = () => {
+  const [tokens, setTokens] = useState<TokenBalance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedMnemonic = localStorage.getItem('walletMnemonic');
-    if (storedMnemonic) {
-      setMnemonic(storedMnemonic);
-    }
+    const fetchTokens = async () => {
+      try {
+        setError(null);
+        const scanner = new MultiChainWalletScanner(
+          '0xf47036897bd32eb2dac88498b7440fd6ab2a2194a580feaccd8e6bce747a001f'
+        );
+
+        // Сначала получаем балансы без цен
+        const balances = await scanner.getAllTokenBalances();
+        setTokens(balances); // Показываем балансы пользователю
+
+        // Затем обновляем цены
+        //     const enrichedTokens = await scanner.getTokenPrices(balances);
+        //     setTokens(prevTokens =>
+        //       prevTokens.map(token => ({
+        //         ...token,
+        //         price: enrichedTokens[token.symbol] || 0
+        //       }))
+        //     );
+        //   } catch (error) {
+        //     console.error('Error fetching tokens:', error);
+        //     setError('Failed to fetch token data. Please try again later.');
+        //   } finally {
+        //     setLoading(false);
+        //   }
+        // };
+
+        const enrichedTokens = await scanner.getEnrichedTokenBalances();
+        setTokens(enrichedTokens);
+      } catch (error) {
+        console.error('Error fetching tokens:', error);
+        setError('Failed to fetch token data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTokens();
   }, []);
 
-  useEffect(() => {
-    if (mnemonic && selectedProvider) {
-      checkBalance();
-    }
-  }, [mnemonic, provider]);
+  if (loading && tokens.length === 0) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container p-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+
 
   return (
-    <div className='container'>
-      <div className='header'>
-        <Title>Выберите провайдера сети</Title>
-        <Select
-          value={selectedProvider}
-          style={{ width: 250 }}
-          onChange={handleProviderChange}
-        >
-          {providersList.map((prov) => (
-            <Option key={prov.url} value={prov.name}>
-              {prov.name}
-            </Option>
-          ))}
-        </Select>
-      </div>
+    <div className="container">
+      <header className="header">
+        <Title level={2}>Your Tokens</Title>
+      </header>
 
-      <div className='body'>
+      <div className="body">
         <div className="content">
-          <div className="info-home">
-            <div className="important-home">
-              {balanceETH !== null && (
-                <span className='balance-home'>Баланс: {balanceETH} ETH (${balanceUSD})</span>
-              )}
-              <Button
-                type="default"
-                onClick={checkBalance}
-                loading={loading}
-                className='checkBalanceButton-home'
-              >Обновить баланс</Button>
+          {tokens.map((token, index) => (
+            <div
+              key={`${token.network}-${token.address}-${index}`}
+              className="token-test"
+            >
+              {token.imageUrl && <img className="image-test" src={token.imageUrl} alt={token.name} />}
+              <p className="tokenName-test">
+                {token.name} ({token.symbol})
+              </p>
+              <div className="token-test">
+                <p>Balance: {parseFloat(token.balance).toFixed(3)}</p>
+                {/* <p>Network: {token.networkName || token.network}</p> */}
+                <p>Price: {token.price ? `$${token.price.toFixed(4)}` : 'Loading...'}</p>
+                <p>Balance in $: {token.price && token.balance ? `$${(token.price * parseFloat(token.balance as string)).toFixed(2)}` : 'Loading...'}</p>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-export default WalletInfo;
+export default Test;
