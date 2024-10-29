@@ -30,8 +30,8 @@
 
 .network-icon {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  bottom: 0px;
+  right: 0px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
