@@ -10,7 +10,8 @@ export const NETWORKS: Networks = {
         scannerKey: 'EXH4AW2DIIBUTZQHQ6HR9AYBEAR1VSTNFH',
         currency: 'ETH',
         chainId: 1,
-        explorer: 'https://etherscan.io'
+        explorer: 'https://etherscan.io',
+        imageUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=022'
     },
     bsc: {
         name: 'BNB Smart Chain',
@@ -20,7 +21,8 @@ export const NETWORKS: Networks = {
         scannerKey: 'TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J',
         currency: 'BNB',
         chainId: 56,
-        explorer: 'https://bscscan.com'
+        explorer: 'https://bscscan.com',
+        imageUrl: 'https://cryptologos.cc/logos/bnb-bnb-logo.svg?v=035'
     },
     arbitrum: {
         name: 'Arbitrum One',
@@ -30,7 +32,8 @@ export const NETWORKS: Networks = {
         scannerKey: '57J7NX18NCVJSEQ48KFMDIEJIS95IBFZJC',
         currency: 'ETH',
         chainId: 42161,
-        explorer: 'https://arbiscan.io'
+        explorer: 'https://arbiscan.io',
+        imageUrl: 'https://cryptologos.cc/logos/arbitrum-arb-logo.svg?v=035'  // Исправлено на логотип Arbitrum
     }
 };
 

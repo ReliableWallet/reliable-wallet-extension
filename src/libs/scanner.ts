@@ -112,7 +112,8 @@ export class MultiChainWalletScanner {
                 balance: nativeBalanceFormatted,
                 address: 'native',
                 decimals: 18,
-                network: networkId
+                network: networkId,
+                networkName: network.name
             }];
 
             for (const tokenAddress of uniqueTokens) {
@@ -134,7 +135,8 @@ export class MultiChainWalletScanner {
                                 balance: formattedBalance,
                                 address: tokenAddress,
                                 decimals: Number(decimals),
-                                network: networkId
+                                network: networkId,
+                                networkName: network.name
                             });
                         }
                     }
@@ -204,12 +206,24 @@ export class MultiChainWalletScanner {
         }
     }
 
-    private async getTokenImage(symbol: string): Promise<string | undefined> {
-        if (this.tokenImageCache[symbol]) {
-            return this.tokenImageCache[symbol];
+    private async getTokenImage(symbol: string, isNativeToken: boolean, networkId: string): Promise<string | undefined> {
+        const cacheKey = isNativeToken ? `native-${networkId}` : symbol;
+        
+        if (this.tokenImageCache[cacheKey]) {
+            return this.tokenImageCache[cacheKey];
         }
 
         try {
+            // Если это нативный токен сети, возвращаем иконку сети
+            if (isNativeToken) {
+                const network = this.networks[networkId];
+                if (network.imageUrl) {
+                    this.tokenImageCache[cacheKey] = network.imageUrl;
+                    return network.imageUrl;
+                }
+            }
+
+            // Для остальных токенов получаем иконку из CoinGecko
             const idMap = await this.getTokenIdMap();
             const tokenId = idMap[symbol.toUpperCase()];
             if (tokenId) {
@@ -217,7 +231,7 @@ export class MultiChainWalletScanner {
                     axios.get(`${COINGECKO_BASE_URL}/coins/${tokenId}`)
                 );
                 const imageUrl = response.data.image.small;
-                this.tokenImageCache[symbol] = imageUrl;
+                this.tokenImageCache[cacheKey] = imageUrl;
                 return imageUrl;
             }
         } catch (error) {
@@ -284,7 +298,8 @@ export class MultiChainWalletScanner {
 
         const enrichedTokens = await Promise.all(
             balances.map(async (token) => {
-                const imageUrl = await this.getTokenImage(token.symbol);
+                const isNativeToken = token.address === 'native';
+                const imageUrl = await this.getTokenImage(token.symbol, isNativeToken, token.network);
                 return {
                     ...token,
                     networkName: this.networks[token.network].name,

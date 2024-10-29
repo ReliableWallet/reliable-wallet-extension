@@ -8,6 +8,7 @@ export interface NetworkConfig {
     currency: string;
     chainId: number;
     explorer: string;
+    imageUrl: string;
 }
 
 export interface Networks {
