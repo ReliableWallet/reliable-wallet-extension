@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Spin } from 'antd';
 import { MultiChainWalletScanner } from './libs/scanner';
 import { TokenBalance } from './libs/types';
+import { NETWORKS } from './libs/constants';
 
 import './css/test.css';
 
@@ -86,13 +87,21 @@ const Test: React.FC = () => {
               key={`${token.network}-${token.address}-${index}`}
               className="token-test"
             >
-              {token.imageUrl && <img className="image-test" src={token.imageUrl} alt={token.name} />}
+              <div className="token-image-container">
+                {token.imageUrl && <img className="image-test" src={token.imageUrl} alt={token.name} />}
+                {token.address !== 'native' && NETWORKS[token.network]?.imageUrl && (
+                  <img 
+                    className="network-icon" 
+                    src={NETWORKS[token.network].imageUrl} 
+                    alt={NETWORKS[token.network].name} 
+                  />
+                )}
+              </div>
               <p className="tokenName-test">
                 {token.name} ({token.symbol})
               </p>
               <div className="token-test">
                 <p>Balance: {parseFloat(token.balance).toFixed(3)}</p>
-                {/* <p>Network: {token.networkName || token.network}</p> */}
                 <p>Price: {token.price ? `$${token.price.toFixed(4)}` : 'Loading...'}</p>
                 <p>Balance in $: {token.price && token.balance ? `$${(token.price * parseFloat(token.balance as string)).toFixed(2)}` : 'Loading...'}</p>
               </div>
