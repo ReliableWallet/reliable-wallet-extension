@@ -12,7 +12,17 @@ export interface NetworkConfig {
 }
 
 export interface Networks {
-    [key: string]: NetworkConfig;
+    [key: string]: {
+        name: string;
+        symbol: string;
+        rpc: string;
+        scanner: string;
+        scannerKey: string;
+        currency: string;
+        chainId: number;
+        explorer: string;
+        imageUrl: string;
+    };
 }
 
 export interface TokenBalance {
@@ -22,7 +32,8 @@ export interface TokenBalance {
     address: string;
     decimals: number;
     network: string;
-    networkName?: string;
+    networkName: string;
     price?: number;
     imageUrl?: string;
+    networkImageUrl?: string;
 }

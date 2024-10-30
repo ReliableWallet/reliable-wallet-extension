@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Spin } from 'antd';
 import { MultiChainWalletScanner } from './libs/scanner';
 import { TokenBalance } from './libs/types';
-import { NETWORKS } from './libs/constants';
+// import { NETWORKS } from './libs/constants';
 
 import './css/test.css';
 
@@ -76,7 +76,8 @@ const Test: React.FC = () => {
 
   return (
     <div className="container">
-      <header className="header">
+      1
+      {/* <header className="header">
         <Title level={2}>Your Tokens</Title>
       </header>
 
@@ -88,15 +89,15 @@ const Test: React.FC = () => {
               className="token-test"
             >
               <div className="token-image-container">
-                {token.imageUrl && <img className="image-test" src={token.imageUrl} alt={token.name} />}
-                {token.address !== 'native' && NETWORKS[token.network]?.imageUrl && (
+                {token.imageUrl && <img className="image-test" src={token.imageUrl} alt={token.name} />} */}
+                {/* {token.address !== 'native' && NETWORKS[token.network]?.imageUrl && (
                   <img 
-                    className="network-icon" 
+                    className="networkIcon-test" 
                     src={NETWORKS[token.network].imageUrl} 
                     alt={NETWORKS[token.network].name} 
                   />
-                )}
-              </div>
+                )} */}
+              {/* </div>
               <p className="tokenName-test">
                 {token.name} ({token.symbol})
               </p>
@@ -108,7 +109,7 @@ const Test: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

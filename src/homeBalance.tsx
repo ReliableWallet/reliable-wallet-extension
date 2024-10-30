@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Alert, Button, Avatar, message } from 'antd';
+import { Typography, Alert, Button, Avatar, message, Select } from 'antd';
 import { ethers, Wallet, WebSocketProvider } from "ethers";
 import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
@@ -8,6 +8,10 @@ import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
 import { CopyFilled, DislikeOutlined, QrcodeOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { MultiChainWalletScanner } from './libs/scanner';
+import { TokenBalance } from './libs/types';
+import { TESTNETS, MAINNETS } from './libs/constants';
+
 
 import { ReactComponent as IconETH } from './img/Network.svg';
 
@@ -31,6 +35,10 @@ const WalletInfo: React.FC = () => {
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [provider, setProvider] = useState<WebSocketProvider | null>(null);
   const [activeTab, setActiveTab] = useState('tokens');
+  const [tokens, setTokens] = useState<TokenBalance[]>([]);
+  const [totalBalanceUSD, setTotalBalanceUSD] = useState<string>('0.00');
+  const [selectedNetwork, setSelectedNetwork] = useState<string>('all');
+  const [isTestnet, setIsTestnet] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
@@ -57,7 +65,7 @@ const WalletInfo: React.FC = () => {
 
   async function shortenAddress(address: string, startLength = 6, endLength = 4): Promise<string> {
     if (address.length <= startLength + endLength) {
-      return address; // Если длина адреса меньше или равна необходимой длине, вернуть его без изменений
+      return address; // Если длина адреса меньше или равна необходимй длине, вернуть его без изменений
     }
     return `${address.slice(0, startLength)}...${address.slice(-endLength)}`;
   }
@@ -68,7 +76,7 @@ const WalletInfo: React.FC = () => {
     // Генерация аватарки и проверка длины ссылки
     while (avatarUrl.length < 240) {
       const avatar = blockies.create({ seed: address, size: 8, scale: 5 }); // Настройки аватара
-      avatarUrl = avatar.toDataURL(); // Преобразование Canvas в Data URL
+      avatarUrl = avatar.toDataURL(); // Преобразовани Canvas в Data URL
 
       // console.log("Generated avatar URL:", avatarUrl);
     }
@@ -101,16 +109,24 @@ const WalletInfo: React.FC = () => {
   async function checkBalance() {
     setLoading(true);
     try {
-      if (!mnemonic || !provider) {
-        throw new Error("Мнемоническая фраза или провайдер не найдены");
+      if (!mnemonic) {
+        throw new Error("Мнемоническая фраза не найдена");
       }
-      const privateKey = Wallet.fromPhrase(mnemonic).privateKey;
-      const wallet = new ethers.Wallet(privateKey, provider);
-      const balance = await provider.getBalance(wallet.address);
-      const balanceInEth = ethers.formatEther(balance);
-      setBalanceETH(balanceInEth);
-      const ethPrice = await getETHPrice();
-      setBalanceUSD((parseFloat(balanceInEth) * ethPrice).toFixed(2));
+
+      const scanner = new MultiChainWalletScanner(
+        Wallet.fromPhrase(mnemonic).privateKey
+      );
+
+      const enrichedTokens = await scanner.getEnrichedTokenBalances();
+      setTokens(enrichedTokens);
+
+      // Подсчет общего баланса в USD
+      const totalUSD = enrichedTokens.reduce((sum, token) => {
+        const balance = parseFloat(token.balance as string);
+        return sum + (token.price || 0) * balance;
+      }, 0);
+
+      setTotalBalanceUSD(totalUSD.toFixed(2));
     } catch (error) {
       console.error("Ошибка при проверке баланса:", error);
     } finally {
@@ -147,17 +163,57 @@ const WalletInfo: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'tokens':
-        return <div className="sectionTokens-home">
-          <div className="token">
-            <div className="IconName-home">
-              <IconETH width={35} height={35} /> 
-              <span>Ethereum</span>
+        return (
+          <>
+            <div className="network-selector">
+              <Select
+                value={selectedNetwork}
+                onChange={setSelectedNetwork}
+                style={{ width: 200, marginBottom: '1em' }}
+                defaultValue="all"
+              >
+                <Select.Option value="all">All Networks</Select.Option>
+                {Object.entries(getCurrentNetworks()).map(([key, network]) => (
+                  <Select.Option key={key} value={key}>
+                    {network.name}
+                  </Select.Option>
+                ))}
+              </Select>
             </div>
-            
-            <span className='toketBalance-home'>{balanceETH} ETH</span>
-          </div>
-
-        </div>;
+            <div className="sectionTokens-home">
+              {getFilteredTokens().map((token, index) => (
+                <div key={`${token.network}-${token.address}-${index}`} className="token">
+                  <div className="IconName-home">
+                    <div className="token-image">
+                      {token.imageUrl && <img src={token.imageUrl} alt={token.name} className="token-icon" />}
+                    </div>
+                    <div className="token-details">
+                      <span className="token-name">{token.name}</span>
+                      <div className="network-info">
+                        {token.networkImageUrl && (
+                          <img 
+                            src={token.networkImageUrl} 
+                            alt={token.networkName} 
+                            className="network-badge-icon"
+                          />
+                        )}
+                        <span className="network-name">{token.networkName}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="token-info">
+                    <span className="tokenBalance-home">
+                      {parseFloat(token.balance).toFixed(4)} {token.symbol}
+                    </span>
+                    <span className="tokenPrice-home">
+                      ${((token.price || 0) * parseFloat(token.balance)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        );
       case 'nfts':
         return <div className="sectionTokens-home">Content for NFT's</div>;
       case 'history':
@@ -173,7 +229,7 @@ const WalletInfo: React.FC = () => {
     if (mnemonic) {
       getPrivateKeyFromMnemonic(mnemonic)
         .then(privateKey => {
-          // Сохраняем приватный ключ в localStorage
+          // Сохраням приватный ключ в localStorage
           localStorage.setItem('walletPrivateKey', privateKey);
 
           // Устанавливаем адрес (или приватный ключ) в состояние компонента
@@ -191,19 +247,11 @@ const WalletInfo: React.FC = () => {
   }, []);
 
   // balance
-  // useEffect(() => {
-  //   const fetchBalance = async () => {
-  //     if (mnemonic) {
-  //       await checkBalance();
-  //     }
-  //   };
-  //   fetchBalance();
-  // });
   useEffect(() => {
-    if (mnemonic && provider) {
+    if (mnemonic) {
       checkBalance();
     }
-  }, [mnemonic, provider]);
+  }, [mnemonic]);
 
   // address
   useEffect(() => {
@@ -246,6 +294,35 @@ const WalletInfo: React.FC = () => {
     });
   }, []);
 
+  useEffect(() => {
+    const storedIsTestnet = localStorage.getItem('isTestnet') === 'true';
+    setIsTestnet(storedIsTestnet);
+  }, []);
+
+  // Получение текущих сетей в зависимости от режима (mainnet/testnet)
+  const getCurrentNetworks = () => {
+    return isTestnet ? TESTNETS : MAINNETS;
+  };
+
+  // Фильтрация токенов по выбранной сети
+  const getFilteredTokens = () => {
+    if (selectedNetwork === 'all') {
+      return tokens;
+    }
+    return tokens.filter(token => token.network === selectedNetwork);
+  };
+
+  // Подсчет общего баланса для отфиьтрованных токенов
+  useEffect(() => {
+    const filteredTokens = getFilteredTokens();
+    const total = filteredTokens.reduce((sum, token) => {
+      const balance = parseFloat(token.balance);
+      const price = token.price || 0;
+      return sum + (balance * price);
+    }, 0);
+    setTotalBalanceUSD(total.toFixed(2));
+  }, [tokens, selectedNetwork]);
+
   const SettingsButton = () => {
     navigate('/settings')
   }
@@ -282,9 +359,7 @@ const WalletInfo: React.FC = () => {
                 {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
 
 
-                {balanceETH !== null && (
-                  <span className='balance-home'>${balanceUSD}</span>
-                )}
+                <span className='balance-home'>${totalBalanceUSD}</span>
 
 
                 <Button

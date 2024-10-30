@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
-import { NETWORKS, ERC20_ABI } from './constants';
+import { MAINNETS, TESTNETS, ERC20_ABI } from './constants';
 import { TokenBalance, Networks } from './types';
 
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -20,10 +20,19 @@ export class MultiChainWalletScanner {
 
     constructor(
         privateKey: string,
-        networks: Networks = NETWORKS
+        networks: Networks = MAINNETS
     ) {
         this.privateKey = privateKey;
-        this.networks = networks;
+        // Получаем сети из localStorage или используем значение по умолчанию
+        const storedNetworks = localStorage.getItem('networks');
+        const isTestnet = localStorage.getItem('isTestnet') === 'true';
+        
+        if (storedNetworks) {
+            this.networks = JSON.parse(storedNetworks);
+        } else {
+            this.networks = isTestnet ? TESTNETS : MAINNETS;
+        }
+        
         this.providers = {};
         this.wallets = {};
         
@@ -43,7 +52,6 @@ export class MultiChainWalletScanner {
         }
     }
 
-    // Вспомогательная функция для соблюдения rate limit
     private async waitForRateLimit(): Promise<void> {
         const now = Date.now();
         const timeSinceLastCall = now - this.lastApiCall;
@@ -54,7 +62,6 @@ export class MultiChainWalletScanner {
         this.lastApiCall = Date.now();
     }
 
-    // Функция для повторных попыток запроса с обработкой ошибок
     private async retryRequest<T>(
         requestFn: () => Promise<T>,
         retries: number = MAX_RETRIES
@@ -64,11 +71,82 @@ export class MultiChainWalletScanner {
             return await requestFn();
         } catch (error: any) {
             if (retries > 0 && error.response?.status === 429) {
-                // Если превышен лимит запросов, ждем и пробуем снова
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 return this.retryRequest(requestFn, retries - 1);
             }
             throw error;
+        }
+    }
+
+    private async isValidContract(provider: ethers.WebSocketProvider, address: string): Promise<boolean> {
+        try {
+            const code = await provider.getCode(address);
+            return code !== '0x' && code.length > 2;
+        } catch {
+            return false;
+        }
+    }
+
+    private async isERC20Contract(contract: ethers.Contract): Promise<boolean> {
+        try {
+            // Проверяем основные функции ERC20
+            await Promise.all([
+                contract.name(),
+                contract.symbol(),
+                contract.decimals()
+            ]);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    private async isLegitToken(
+        contract: ethers.Contract, 
+        balance: string, 
+        symbol: string,
+        name: string
+    ): Promise<boolean> {
+        try {
+            // Расширяем список подозрительных паттернов
+            const suspiciousPatterns = [
+                'ADDRESS',
+                'TRON',
+                'PANTOS',
+                'TEST',
+                'FAKE',
+                'SCAM',
+                'VANITY',
+                'PAN',
+                'VOID',
+                'DEMO'
+            ];
+
+            // Проверяем и символ и имя токена на подозрительные паттерны
+            const upperSymbol = symbol.toUpperCase();
+            const upperName = name.toUpperCase();
+            
+            if (suspiciousPatterns.some(pattern => 
+                upperSymbol.includes(pattern) || 
+                upperName.includes(pattern)
+            )) {
+                return false;
+            }
+
+            // Проверяем баланс - слишком большие числа могут быть подозрительными
+            const balanceNumber = parseFloat(balance);
+            if (balanceNumber > 10000) { // Уменьшаем порог для тестовых токенов
+                return false;
+            }
+
+            // Проверяем длину символа - слишком длинные символы подозрительны
+            if (symbol.length > 10) {
+                return false;
+            }
+
+            return true;
+        } catch {
+            return false;
         }
     }
 
@@ -84,11 +162,9 @@ export class MultiChainWalletScanner {
         try {
             const walletAddress = wallet.address;
 
-            // Получаем баланс нативного токена
             const nativeBalance = await provider.getBalance(walletAddress);
             const nativeBalanceFormatted = ethers.formatEther(nativeBalance);
 
-            // Получаем транзакции токенов из сканера сети
             const tokensResponse = await axios.get(network.scanner, {
                 params: {
                     module: 'account',
@@ -118,30 +194,52 @@ export class MultiChainWalletScanner {
 
             for (const tokenAddress of uniqueTokens) {
                 try {
+                    // Проверяем, является ли адрес действительным контрактом
+                    if (!(await this.isValidContract(provider, tokenAddress))) {
+                        continue;
+                    }
+
                     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, wallet);
+
+                    // Проверяем, соответствует ли контракт стандарту ERC20
+                    if (!(await this.isERC20Contract(contract))) {
+                        continue;
+                    }
+
+                    // Получаем информацию о токене с таймаутом
                     const [balance, decimals, symbol, name] = await Promise.all([
-                        contract.balanceOf(walletAddress),
-                        contract.decimals(),
-                        contract.symbol(),
-                        contract.name()
+                        contract.balanceOf(walletAddress).catch(() => null),
+                        contract.decimals().catch(() => null),
+                        contract.symbol().catch(() => null),
+                        contract.name().catch(() => null)
                     ]);
 
-                    if (balance && decimals !== undefined) {
-                        const formattedBalance = ethers.formatUnits(balance, decimals);
-                        if (parseFloat(formattedBalance) > 0) {
-                            tokenBalances.push({
-                                symbol: String(symbol),
-                                name: String(name),
-                                balance: formattedBalance,
-                                address: tokenAddress,
-                                decimals: Number(decimals),
-                                network: networkId,
-                                networkName: network.name
-                            });
-                        }
+                    // Проверяем, что все необходимые данные получены
+                    if (!balance || decimals === null || !symbol || !name) {
+                        continue;
+                    }
+
+                    const formattedBalance = ethers.formatUnits(balance, decimals);
+                    
+                    // Добавляем проверку на легитимность токена
+                    if (!(await this.isLegitToken(contract, formattedBalance, symbol, name))) {
+                        continue;
+                    }
+
+                    if (parseFloat(formattedBalance) > 0) {
+                        tokenBalances.push({
+                            symbol: String(symbol),
+                            name: String(name),
+                            balance: formattedBalance,
+                            address: tokenAddress,
+                            decimals: Number(decimals),
+                            network: networkId,
+                            networkName: network.name
+                        });
                     }
                 } catch (error) {
                     console.error(`Skipping token ${tokenAddress} on ${networkId}: ${error}`);
+                    continue;
                 }
             }
 
@@ -178,13 +276,13 @@ export class MultiChainWalletScanner {
         }
 
         try {
-            // Используем локальную базу популярных токенов вместо запроса к API
             const popularTokens = {
                 'ETH': 'ethereum',
                 'BTC': 'bitcoin',
                 'USDT': 'tether',
                 'USDC': 'usd-coin',
                 'BNB': 'binancecoin',
+                'tBNB': 'binancecoin', // Добавляем маппинг для тестового BNB
                 'XRP': 'ripple',
                 'ADA': 'cardano',
                 'DOGE': 'dogecoin',
@@ -195,7 +293,6 @@ export class MultiChainWalletScanner {
                 'UNI': 'uniswap',
                 'LINK': 'chainlink',
                 'AAVE': 'aave',
-                // Добавьте другие популярные токены по необходимости
             };
 
             this.tokenIdMapCache = popularTokens;
@@ -214,7 +311,6 @@ export class MultiChainWalletScanner {
         }
 
         try {
-            // Если это нативный токен сети, возвращаем иконку сети
             if (isNativeToken) {
                 const network = this.networks[networkId];
                 if (network.imageUrl) {
@@ -223,7 +319,6 @@ export class MultiChainWalletScanner {
                 }
             }
 
-            // Для остальных токенов получаем иконку из CoinGecko
             const idMap = await this.getTokenIdMap();
             const tokenId = idMap[symbol.toUpperCase()];
             if (tokenId) {
@@ -243,12 +338,23 @@ export class MultiChainWalletScanner {
 
     async getTokenPrices(tokenBalances: TokenBalance[]): Promise<{ [key: string]: number }> {
         try {
-            const symbols = [...new Set(tokenBalances.map(token => token.symbol))];
+            const symbols = [...new Set(tokenBalances.map(token => {
+                // Расширяем маппинг тестовых токенов на их mainnet аналоги
+                switch(token.symbol.toLowerCase()) {
+                    case 'tbnb':
+                    case 'panbnb':
+                        return 'BNB';
+                    case 'tsepolia':
+                    case 'eth':
+                        return 'ETH';
+                    default:
+                        return token.symbol;
+                }
+            }))];
+            
             const idMap = await this.getTokenIdMap();
-            
             const prices: { [key: string]: number } = {};
-            
-            // Разбиваем на меньшие чанки и добавляем больше задержки
+
             for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
                 const symbolsChunk = symbols.slice(i, i + CHUNK_SIZE);
                 const tokenIds = symbolsChunk
@@ -271,14 +377,21 @@ export class MultiChainWalletScanner {
                     for (const symbol of symbolsChunk) {
                         const id = idMap[symbol.toUpperCase()];
                         if (id && response.data[id]) {
+                            // Устанавливаем цену для оригинального символа и его тестового аналога
                             prices[symbol] = response.data[id].usd;
+                            if (symbol === 'BNB') {
+                                prices['tBNB'] = response.data[id].usd;
+                                prices['panBNB'] = response.data[id].usd;
+                            }
+                            if (symbol === 'ETH') {
+                                prices['tSEPOLIA'] = response.data[id].usd;
+                            }
                         }
                     }
                 } catch (error: any) {
                     if (error.response?.status === 429) {
-                        // При ошибке rate limit ждем дольше
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
-                        i -= CHUNK_SIZE; // Повторяем этот же чанк
+                        i -= CHUNK_SIZE;
                         continue;
                     }
                     console.error(`Error fetching prices for chunk ${i}:`, error);
@@ -304,7 +417,8 @@ export class MultiChainWalletScanner {
                     ...token,
                     networkName: this.networks[token.network].name,
                     price: prices[token.symbol] || 0,
-                    imageUrl
+                    imageUrl,
+                    networkImageUrl: this.networks[token.network].imageUrl
                 };
             })
         );

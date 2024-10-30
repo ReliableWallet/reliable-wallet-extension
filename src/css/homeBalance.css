@@ -154,6 +154,11 @@
     top: 0em;
     width: 95%;
     height: 100%;
+    overflow: scroll;
+}
+
+.column-home::-webkit-scrollbar {
+    width: 0;
 }
 
 
@@ -169,25 +174,118 @@
     position: relative;
     display: flex;
     width: 100%;
-    height: 20%;
-    align-content: center;
-    margin: 10px 0px;
+    height: auto;
+    padding: 10px;
+    align-items: center;
     justify-content: space-between;
-    
-    /* border: 1px solid pink; */
+    margin: 10px 0px;
 }
 
 .IconName-home {
     display: flex;
     align-items: center;
+    gap: 12px;
+}
+
+.token-image {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.token-icon {
+    width: 100%;
     height: 100%;
-    text-align: center;
+    border-radius: 50%;
+    /* object-fit: cover; */
 }
 
-.IconName-home  span{
-    margin-left: 10px;
+.token-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.toketBalance-home {
-    align-content: center;
+.token-name {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.network-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.network-badge-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.network-name {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.token-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.tokenBalance-home {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.tokenPrice-home {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.network-selector {
+  display: flex;
+  justify-content: start;
+  align-items: center;  
+  margin-top: 10px;
+}
+
+.token-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5em;
+  padding-right: 1em;
+}
+
+.tokenPrice-home {
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.token-image-container {
+    position: relative;
+    width: 35px;
+    height: 35px;
+    margin-right: 10px;
+}
+
+.token-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+}
+
+.network-icon {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
