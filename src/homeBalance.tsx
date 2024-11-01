@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Alert, Button, Avatar, message, Select } from 'antd';
-import { ethers, Wallet, WebSocketProvider } from "ethers";
+import { ethers, Wallet, JsonRpcProvider } from "ethers";
 import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import IconButton from './libs/IconButton';
@@ -33,7 +33,7 @@ const WalletInfo: React.FC = () => {
   const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
-  const [provider, setProvider] = useState<WebSocketProvider | null>(null);
+  const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
   const [activeTab, setActiveTab] = useState('tokens');
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [totalBalanceUSD, setTotalBalanceUSD] = useState<string>('0.00');
@@ -90,7 +90,7 @@ const WalletInfo: React.FC = () => {
     const storedProvider = localStorage.getItem('userProvider');
     const defaultProvider = "wss://ethereum-sepolia-rpc.publicnode.com"; // Sepolia по умолчанию
     const providerUrl = storedProvider || defaultProvider;
-    const newProvider = new WebSocketProvider(providerUrl);
+    const newProvider = new JsonRpcProvider(providerUrl);
     setProvider(newProvider);
   };
 
@@ -186,18 +186,25 @@ const WalletInfo: React.FC = () => {
                   <div className="IconName-home">
                     <div className="token-image">
                       {token.imageUrl && <img src={token.imageUrl} alt={token.name} className="token-icon" />}
+                      {token.address !== 'native' && (
+                        <img
+                          className="networkIcon-home"
+                          src={token.networkImageUrl}
+                          alt={token.networkName}
+                        />
+                      )}
                     </div>
                     <div className="token-details">
                       <span className="token-name">{token.name}</span>
                       <div className="network-info">
-                        {token.networkImageUrl && (
-                          <img 
-                            src={token.networkImageUrl} 
-                            alt={token.networkName} 
+                        {/* {token.networkImageUrl && (
+                          <img
+                            src={token.networkImageUrl}
+                            alt={token.networkName}
                             className="network-badge-icon"
                           />
                         )}
-                        <span className="network-name">{token.networkName}</span>
+                        <span className="network-name">{token.networkName}</span> */}
                       </div>
                     </div>
                   </div>
@@ -373,7 +380,7 @@ const WalletInfo: React.FC = () => {
               </div>
 
               <div className="buttonNav-home">
-              <Button
+                <Button
                   type='default'
                   size='large'
                   onClick={QrButton}
@@ -393,7 +400,7 @@ const WalletInfo: React.FC = () => {
                   onClick={QrButton}
                   className='qrButton-home button-home'
                   icon={<RetweetOutlined />}>
-                Swap</Button>
+                  Swap</Button>
               </div>
             </div>
             <div className="sectionBalance-home">

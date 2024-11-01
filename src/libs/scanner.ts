@@ -10,7 +10,7 @@ const CHUNK_SIZE = 50;
 
 export class MultiChainWalletScanner {
     private privateKey: string;
-    private providers: { [key: string]: ethers.WebSocketProvider };
+    private providers: { [key: string]: ethers.Provider };
     private wallets: { [key: string]: ethers.Wallet };
     private networks: Networks;
     private tokenIdMapCache: { [symbol: string]: string } | null = null;
@@ -23,7 +23,9 @@ export class MultiChainWalletScanner {
         networks: Networks = MAINNETS
     ) {
         this.privateKey = privateKey;
-        // Получаем сети из localStorage или используем значение по умолчанию
+        
+        localStorage.removeItem('networks');
+        
         const storedNetworks = localStorage.getItem('networks');
         const isTestnet = localStorage.getItem('isTestnet') === 'true';
         
@@ -31,21 +33,47 @@ export class MultiChainWalletScanner {
             this.networks = JSON.parse(storedNetworks);
         } else {
             this.networks = isTestnet ? TESTNETS : MAINNETS;
+            localStorage.setItem('networks', JSON.stringify(this.networks));
         }
         
         this.providers = {};
         this.wallets = {};
-        
-        this.initializeNetworks();
+
+        // console.log('Constructor networks:', this.networks);
     }
-    private initializeNetworks(): void {
-        for (const [networkId, network] of Object.entries(this.networks)) {
+
+    private async initializeNetworks(): Promise<void> {
+        for (const [networkId, networkConfig] of Object.entries(this.networks)) {
             try {
-                const provider = new ethers.WebSocketProvider(network.rpc);
-                const wallet = new ethers.Wallet(this.privateKey, provider);
+                console.log(`Initializing network ${networkConfig.rpc}`);
+                const provider = new ethers.JsonRpcProvider(networkConfig.rpc, {
+                    chainId: networkConfig.chainId,
+                    name: networkConfig.name
+                });
                 
-                this.providers[networkId] = provider;
-                this.wallets[networkId] = wallet;
+                try {
+                    const networkPromise = Promise.race([
+                        provider.ready,
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Network initialization timeout')), 10000)
+                        )
+                    ]);
+                    
+                    await networkPromise;
+                    
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== BigInt(networkConfig.chainId)) {
+                        throw new Error(`Network ${networkId} chainId mismatch`);
+                    }
+                    
+                    const wallet = new ethers.Wallet(this.privateKey, provider);
+                    
+                    this.providers[networkId] = provider;
+                    this.wallets[networkId] = wallet;
+                    
+                } catch (error) {
+                    console.error(`Error connecting to network ${networkId}:`, error);
+                }
             } catch (error) {
                 console.error(`Error initializing network ${networkId}:`, error);
             }
@@ -78,7 +106,7 @@ export class MultiChainWalletScanner {
         }
     }
 
-    private async isValidContract(provider: ethers.WebSocketProvider, address: string): Promise<boolean> {
+    private async isValidContract(provider: ethers.Provider, address: string): Promise<boolean> {
         try {
             const code = await provider.getCode(address);
             return code !== '0x' && code.length > 2;
@@ -89,7 +117,6 @@ export class MultiChainWalletScanner {
 
     private async isERC20Contract(contract: ethers.Contract): Promise<boolean> {
         try {
-            // Проверяем основные функции ERC20
             await Promise.all([
                 contract.name(),
                 contract.symbol(),
@@ -108,7 +135,6 @@ export class MultiChainWalletScanner {
         name: string
     ): Promise<boolean> {
         try {
-            // Расширяем список подозрительных паттернов
             const suspiciousPatterns = [
                 'ADDRESS',
                 'TRON',
@@ -122,7 +148,6 @@ export class MultiChainWalletScanner {
                 'DEMO'
             ];
 
-            // Проверяем и символ и имя токена на подозрительные паттерны
             const upperSymbol = symbol.toUpperCase();
             const upperName = name.toUpperCase();
             
@@ -133,13 +158,11 @@ export class MultiChainWalletScanner {
                 return false;
             }
 
-            // Проверяем баланс - слишком большие числа могут быть подозрительными
             const balanceNumber = parseFloat(balance);
-            if (balanceNumber > 10000) { // Уменьшаем порог для тестовых токенов
+            if (balanceNumber > 10000) {
                 return false;
             }
 
-            // Проверяем длину символа - слишком длинные символы подозрительны
             if (symbol.length > 10) {
                 return false;
             }
@@ -151,12 +174,15 @@ export class MultiChainWalletScanner {
     }
 
     async getTokenBalancesForNetwork(networkId: string): Promise<TokenBalance[]> {
+        await this.ensureNetworksInitialized();
+
         const network = this.networks[networkId];
         const wallet = this.wallets[networkId];
         const provider = this.providers[networkId];
 
         if (!wallet || !provider) {
-            throw new Error(`Network ${networkId} not initialized`);
+            console.error(`Network ${networkId} not properly initialized`);
+            return [];
         }
 
         try {
@@ -194,19 +220,16 @@ export class MultiChainWalletScanner {
 
             for (const tokenAddress of uniqueTokens) {
                 try {
-                    // Проверяем, является ли адрес действительным контрактом
                     if (!(await this.isValidContract(provider, tokenAddress))) {
                         continue;
                     }
 
                     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, wallet);
 
-                    // Проверяем, соответствует ли контракт стандарту ERC20
                     if (!(await this.isERC20Contract(contract))) {
                         continue;
                     }
 
-                    // Получаем информацию о токене с таймаутом
                     const [balance, decimals, symbol, name] = await Promise.all([
                         contract.balanceOf(walletAddress).catch(() => null),
                         contract.decimals().catch(() => null),
@@ -214,14 +237,12 @@ export class MultiChainWalletScanner {
                         contract.name().catch(() => null)
                     ]);
 
-                    // Проверяем, что все необходимые данные получены
                     if (!balance || decimals === null || !symbol || !name) {
                         continue;
                     }
 
                     const formattedBalance = ethers.formatUnits(balance, decimals);
                     
-                    // Добавляем проверку на легитимность токена
                     if (!(await this.isLegitToken(contract, formattedBalance, symbol, name))) {
                         continue;
                     }
@@ -251,16 +272,19 @@ export class MultiChainWalletScanner {
     }
 
     async getAllTokenBalances(): Promise<TokenBalance[]> {
+        await this.ensureNetworksInitialized();
+        
         const allBalances: TokenBalance[] = [];
         const networks = Object.keys(this.networks);
 
-        const promises = networks.map(networkId => 
-            this.getTokenBalancesForNetwork(networkId)
-                .catch(error => {
-                    console.error(`Error getting balances for ${networkId}:`, error);
-                    return [];
-                })
-        );
+        const promises = networks.map(async networkId => {
+            try {
+                return await this.getTokenBalancesForNetwork(networkId);
+            } catch (error) {
+                console.error(`Error getting balances for ${networkId}:`, error);
+                return [];
+            }
+        });
 
         const results = await Promise.all(promises);
         results.forEach(networkBalances => {
@@ -277,24 +301,42 @@ export class MultiChainWalletScanner {
 
         try {
             const popularTokens = {
-                'ETH': 'ethereum',
-                'BTC': 'bitcoin',
-                'USDT': 'tether',
-                'USDC': 'usd-coin',
-                'BNB': 'binancecoin',
-                'tBNB': 'binancecoin', // Добавляем маппинг для тестового BNB
-                'XRP': 'ripple',
-                'ADA': 'cardano',
-                'DOGE': 'dogecoin',
-                'MATIC': 'matic-network',
-                'SOL': 'solana',
-                'DOT': 'polkadot',
-                'DAI': 'dai',
-                'UNI': 'uniswap',
-                'LINK': 'chainlink',
-                'AAVE': 'aave',
-            };
-
+                'ETH': 'ethereum',              // Ethereum
+                'USDT': 'tether',               // Tether
+                'USDC': 'usd-coin',             // USD Coin
+                'DAI': 'dai',                   // Dai
+                'UNI': 'uniswap',               // Uniswap
+                'LINK': 'chainlink',            // Chainlink
+                'AAVE': 'aave',                 // Aave
+                'MATIC': 'matic-network',       // Polygon (Matic)
+                'WBTC': 'wrapped-bitcoin',      // Wrapped Bitcoin
+                'SUSHI': 'sushiswap',           // SushiSwap
+                'COMP': 'compound',             // Compound
+                'MKR': 'maker',                 // Maker
+                'SNX': 'synthetix-network-token', // Synthetix
+                'YFI': 'yearn-finance',         // Yearn Finance
+                'BAT': 'basic-attention-token', // Basic Attention Token
+                'ZRX': '0x',                    // 0x Protocol
+                'CRV': 'curve-dao-token',       // Curve DAO Token
+                'BAL': 'balancer',              // Balancer
+                '1INCH': '1inch',               // 1inch
+                'GRT': 'the-graph',             // The Graph
+                'REN': 'ren',                   // Ren
+                'RLC': 'iexec-rlc',             // iExec RLC
+                'ENJ': 'enjincoin',             // Enjin Coin
+                'AMP': 'amp',                   // Amp
+                'LRC': 'loopring',              // Loopring
+                'OMG': 'omg-network',           // OMG Network
+                'BNT': 'bancor',                // Bancor
+                'SAND': 'the-sandbox',          // The Sandbox
+                'CHZ': 'chiliz',                // Chiliz
+                'ANT': 'aragon',                // Aragon
+                'AKRO': 'akropolis',            // Akropolis
+                'OCEAN': 'ocean-protocol',       // Ocean Protocol
+                'BNB': 'binancecoin',  // Убедимся, что это правильный ID для BNB
+                'TBNB': 'binancecoin', // Добавим маппинг для тестового BNB
+                'tBNB': 'binancecoin',
+              };
             this.tokenIdMapCache = popularTokens;
             return popularTokens;
         } catch (error) {
@@ -339,13 +381,11 @@ export class MultiChainWalletScanner {
     async getTokenPrices(tokenBalances: TokenBalance[]): Promise<{ [key: string]: number }> {
         try {
             const symbols = [...new Set(tokenBalances.map(token => {
-                // Расширяем маппинг тестовых токенов на их mainnet аналоги
-                switch(token.symbol.toLowerCase()) {
-                    case 'tbnb':
-                    case 'panbnb':
+                // Нормализуем символы для всех сетей
+                switch(token.network) {
+                    case 'bscTestnet':
                         return 'BNB';
-                    case 'tsepolia':
-                    case 'eth':
+                    case 'sepolia':
                         return 'ETH';
                     default:
                         return token.symbol;
@@ -377,14 +417,22 @@ export class MultiChainWalletScanner {
                     for (const symbol of symbolsChunk) {
                         const id = idMap[symbol.toUpperCase()];
                         if (id && response.data[id]) {
-                            // Устанавливаем цену для оригинального символа и его тестового аналога
-                            prices[symbol] = response.data[id].usd;
+                            const price = response.data[id].usd;
+                            // Сохраняем цену для всех вариантов символа
+                            prices[symbol] = price;
+                            
+                            // Для BNB сохраняем цену под всеми возможными символами
                             if (symbol === 'BNB') {
-                                prices['tBNB'] = response.data[id].usd;
-                                prices['panBNB'] = response.data[id].usd;
+                                prices['BNB'] = price;
+                                prices['tBNB'] = price;
+                                prices['TBNB'] = price;
                             }
+                            
+                            // Для ETH сохраняем цену под всеми возможными символами
                             if (symbol === 'ETH') {
-                                prices['tSEPOLIA'] = response.data[id].usd;
+                                prices['ETH'] = price;
+                                prices['sepETH'] = price;
+                                prices['SEPOLIA'] = price;
                             }
                         }
                     }
@@ -406,6 +454,8 @@ export class MultiChainWalletScanner {
     }
 
     async getEnrichedTokenBalances(): Promise<TokenBalance[]> {
+        await this.ensureNetworksInitialized();
+        
         const balances = await this.getAllTokenBalances();
         const prices = await this.getTokenPrices(balances);
 
@@ -424,5 +474,11 @@ export class MultiChainWalletScanner {
         );
 
         return enrichedTokens;
+    }
+
+    private async ensureNetworksInitialized(): Promise<void> {
+        if (Object.keys(this.providers).length === 0) {
+            await this.initializeNetworks();
+        }
     }
 }

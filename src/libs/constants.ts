@@ -5,7 +5,7 @@ export const MAINNETS: Networks = {
     ethereum: {
         name: 'Ethereum',
         symbol: 'ETH',
-        rpc: 'wss://ethereum-rpc.publicnode.com',
+        rpc: 'https://eth-mainnet.public.blastapi.io',  // Changed to HTTPS
         scanner: 'https://api.etherscan.io/api',
         scannerKey: 'EXH4AW2DIIBUTZQHQ6HR9AYBEAR1VSTNFH',
         currency: 'ETH',
@@ -16,7 +16,7 @@ export const MAINNETS: Networks = {
     bsc: {
         name: 'BNB Smart Chain',
         symbol: 'BNB',
-        rpc: 'wss://bsc-rpc.publicnode.com',
+        rpc: 'https://bsc-dataseed1.binance.org',  // Changed to HTTPS
         scanner: 'https://api.bscscan.com/api',
         scannerKey: 'TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J',
         currency: 'BNB',
@@ -27,7 +27,7 @@ export const MAINNETS: Networks = {
     arbitrum: {
         name: 'Arbitrum One',
         symbol: 'ETH',
-        rpc: 'wss://arbitrum.callstaticrpc.com',
+        rpc: 'https://arb1.arbitrum.io/rpc',  // Changed to HTTPS
         scanner: 'https://api.arbiscan.io/api',
         scannerKey: '57J7NX18NCVJSEQ48KFMDIEJIS95IBFZJC',
         currency: 'ETH',
@@ -41,7 +41,7 @@ export const TESTNETS: Networks = {
     sepolia: {
         name: 'Sepolia',
         symbol: 'ETH',
-        rpc: 'wss://ethereum-sepolia-rpc.publicnode.com',
+        rpc: 'https://eth-sepolia.public.blastapi.io',  // Changed to HTTPS
         scanner: 'https://api-sepolia.etherscan.io/api',
         scannerKey: 'EXH4AW2DIIBUTZQHQ6HR9AYBEAR1VSTNFH',
         currency: 'ETH',
@@ -51,8 +51,8 @@ export const TESTNETS: Networks = {
     },
     bscTestnet: {
         name: 'BSC Testnet',
-        symbol: 'tBNB',
-        rpc: 'wss://bsc-testnet-rpc.publicnode.com',
+        symbol: 'BNB',
+        rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545',  // Changed to HTTPS
         scanner: 'https://api-testnet.bscscan.com/api',
         scannerKey: 'TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J',
         currency: 'tBNB',

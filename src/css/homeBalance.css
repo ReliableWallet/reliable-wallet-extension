@@ -150,11 +150,13 @@
   }
 
 .column-home {
-    position: absolute;
-    top: 0em;
-    width: 95%;
     height: 100%;
-    overflow: scroll;
+    width: 95%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    margin: 0;
+    border-bottom: none;
 }
 
 .column-home::-webkit-scrollbar {
@@ -164,7 +166,7 @@
 
 .sectionTokens-home {
     position: relative;
-    height: 55%;
+    height: auto;
 
     text-align: center;
     align-content: start;
@@ -188,6 +190,7 @@
 }
 
 .token-image {
+    position: relative;
     width: 40px;
     height: 40px;
     flex-shrink: 0;
@@ -289,3 +292,15 @@
     padding: 2px;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+.networkIcon-home {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    width: 18px;
+    height: 18px;
+
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.199);
+    padding: .7px;
+  }

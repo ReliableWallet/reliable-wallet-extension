@@ -44,7 +44,7 @@
     "build-background": "webpack ",
     "start-r": "react-app-rewired start",
     "start": "react-scripts start --config webpack.config.js",
-    "build": "react-app-rewired build && webpack",
+    "build": "react-app-rewired build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "build-w": "webpack --mode development"
