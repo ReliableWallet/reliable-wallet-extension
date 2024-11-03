@@ -4,10 +4,11 @@ import { Typography, Alert, Button, Avatar, message, Select } from 'antd';
 import { ethers, Wallet, JsonRpcProvider } from "ethers";
 import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
-import IconButton from './libs/IconButton';
 import { FaGear } from "react-icons/fa6";
 import { CopyFilled, DislikeOutlined, QrcodeOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
 import axios from 'axios';
+
+import IconButton from './libs/IconButton';
 import { MultiChainWalletScanner } from './libs/scanner';
 import { TokenBalance } from './libs/types';
 import { TESTNETS, MAINNETS } from './libs/constants';
@@ -16,7 +17,6 @@ import { TESTNETS, MAINNETS } from './libs/constants';
 import { ReactComponent as IconETH } from './img/Network.svg';
 
 import './css/homeBalance.css';
-
 const { Title, Text } = Typography;
 
 // WebSocket провайдер для подключения к сети Ethereum (Sepolia)
@@ -29,8 +29,6 @@ const WalletInfo: React.FC = () => {
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
   const [ShortAddress, setShortAddress] = useState<string | null>(null);
-  const [balanceETH, setBalanceETH] = useState<string | null>(null);
-  const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
@@ -39,6 +37,9 @@ const WalletInfo: React.FC = () => {
   const [totalBalanceUSD, setTotalBalanceUSD] = useState<string>('0.00');
   const [selectedNetwork, setSelectedNetwork] = useState<string>('all');
   const [isTestnet, setIsTestnet] = useState<boolean>(false);
+
+  // const [balanceETH, setBalanceETH] = useState<string | null>(null);
+  // const [balanceUSD, setBalanceUSD] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -73,7 +74,7 @@ const WalletInfo: React.FC = () => {
   async function getAvatarFromAddress(address: string): Promise<string> {
     let avatarUrl = "";
 
-    // Генерация аватарки и проверка длины ссылки
+    // Генерация аватарки и проверк длины ссылки
     while (avatarUrl.length < 240) {
       const avatar = blockies.create({ seed: address, size: 8, scale: 5 }); // Настройки аватара
       avatarUrl = avatar.toDataURL(); // Преобразовани Canvas в Data URL
@@ -152,7 +153,7 @@ const WalletInfo: React.FC = () => {
 
   // mnemonic
   useEffect(() => {
-    // Получаем мнемоническую фразу из localStorage при монтировании компонента
+    // Получаем мнемоническую фразу из localStorage при монтировании кмпонента
     const storedMnemonic = localStorage.getItem('walletMnemonic');
     if (storedMnemonic) {
       setMnemonic(storedMnemonic);
@@ -197,14 +198,6 @@ const WalletInfo: React.FC = () => {
                     <div className="token-details">
                       <span className="token-name">{token.name}</span>
                       <div className="network-info">
-                        {/* {token.networkImageUrl && (
-                          <img
-                            src={token.networkImageUrl}
-                            alt={token.networkName}
-                            className="network-badge-icon"
-                          />
-                        )}
-                        <span className="network-name">{token.networkName}</span> */}
                       </div>
                     </div>
                   </div>
@@ -338,6 +331,50 @@ const WalletInfo: React.FC = () => {
     navigate('/QrCode')
   }
 
+  // Добавьте новый useState для wallet
+  const [wallet, setWallet] = useState<ethers.Wallet | null>(null);
+
+  // Упрощаем инициализацию provider
+  useEffect(() => {
+    const currentNetwork = isTestnet ? TESTNETS : MAINNETS;
+    const defaultRpc = Object.values(currentNetwork)[0].rpc;
+    const newProvider = new JsonRpcProvider(defaultRpc);
+    setProvider(newProvider);
+  }, [isTestnet]);
+
+  // Инициализация wallet с provider
+  useEffect(() => {
+    if (privateKey && provider) {
+      const newWallet = new ethers.Wallet(privateKey, provider);
+      setWallet(newWallet);
+    }
+  }, [privateKey, provider]);
+
+  const handleSendClick = () => {
+    navigate('/send');
+  };
+
+  const handleSwapClick = () => {
+    navigate('/swap');
+  };
+
+  // Сохраняем tokens при их изменении
+  useEffect(() => {
+    if (tokens.length > 0) {
+      localStorage.setItem('tokens', JSON.stringify(tokens));
+    }
+  }, [tokens]);
+
+  // Сохраняем wallet при его изменении
+  useEffect(() => {
+    if (wallet) {
+      localStorage.setItem('wallet', JSON.stringify({
+        address: wallet.address,
+        privateKey: wallet.privateKey
+      }));
+    }
+  }, [wallet]);
+
   return (
     <div className='container'>
 
@@ -364,11 +401,7 @@ const WalletInfo: React.FC = () => {
             <div className="info-home">
               <div className="important-home">
                 {avatarImage && <img className='avatar' src={avatarImage} alt="Avatar" />}
-
-
                 <span className='balance-home'>${totalBalanceUSD}</span>
-
-
                 <Button
                   type="default"
                   onClick={checkBalance}
@@ -376,58 +409,70 @@ const WalletInfo: React.FC = () => {
                   variant='filled'
                   className='checkBalanceButton-home button-home'
                   icon={<ReloadOutlined />}
-                ></Button>
+                />
               </div>
 
               <div className="buttonNav-home">
                 <Button
                   type='default'
                   size='large'
-                  onClick={QrButton}
+                  onClick={handleSendClick}
                   className='qrButton-home button-home'
-                  icon={<DislikeOutlined />}>
+                  icon={<DislikeOutlined />}
+                >
+                  Send
                 </Button>
+
                 <Button
                   type='default'
                   size='large'
                   onClick={QrButton}
                   className='qrButton-home button-home'
-                  icon={<QrcodeOutlined />}>
+                  icon={<QrcodeOutlined />}
+                >
+                  QRCode
                 </Button>
+
                 <Button
                   type='default'
                   size='large'
-                  onClick={QrButton}
+                  onClick={handleSwapClick}
                   className='qrButton-home button-home'
-                  icon={<RetweetOutlined />}>
-                  Swap</Button>
+                  icon={<RetweetOutlined />}
+                >
+                  Swap
+                </Button>
               </div>
             </div>
+
             <div className="sectionBalance-home">
-
-              <Button className='balanceButton-home'
+              <Button 
+                className='balanceButton-home'
                 onClick={() => setActiveTab('tokens')}
-              >TOKENS</Button>
-              <Button className='balanceButton-home'
+              >
+                TOKENS
+              </Button>
+              <Button 
+                className='balanceButton-home'
                 onClick={() => setActiveTab('nfts')}
-              >NFT's</Button>
-              <Button className='balanceButton-home'
+              >
+                NFT's
+              </Button>
+              <Button 
+                className='balanceButton-home'
                 onClick={() => setActiveTab('history')}
-              >History</Button>
-
+              >
+                History
+              </Button>
             </div>
 
-
             {renderContent()}
-            {/* <div className='sectionTokens-home'>
-              {renderContent()}
-            </div> */}
-
           </div>
 
         </div>
       </div>
     </div>
+
   );
 };
 

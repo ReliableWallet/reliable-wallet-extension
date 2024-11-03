@@ -304,3 +304,19 @@
     background: rgba(255, 255, 255, 0.199);
     padding: .7px;
   }
+
+/* Добавьте эти стили */
+.content {
+  position: relative;
+  width: 100%;
+}
+
+.send-page, .swap-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--your-background-color);
+  z-index: 1;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter, Routes, Route } from 'react-router-dom'; // Используем HashRouter
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import Home from './Home';
 import Login from './login';
 import Create from './create';
@@ -9,6 +9,8 @@ import HomeBalance from './homeBalance';
 import Settings from './settings';
 import QrCode from './QrCode';
 import Networks from './settingsList/networks';
+import SendToken from './pages/SendToken';
+import SwapToken from './pages/SwapToken';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
@@ -24,6 +26,8 @@ root.render(
         <Route path="/Settings" element={<Settings />} />
         <Route path="/QrCode" element={<QrCode />} />
         <Route path="/Networks" element={<Networks />} />
+        <Route path="/send" element={<SendToken />} />
+        <Route path="/swap" element={<SwapToken />} />
       </Routes>
     </HashRouter>
   </React.StrictMode>

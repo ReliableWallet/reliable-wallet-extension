@@ -45,7 +45,7 @@ export class MultiChainWalletScanner {
     private async initializeNetworks(): Promise<void> {
         for (const [networkId, networkConfig] of Object.entries(this.networks)) {
             try {
-                console.log(`Initializing network ${networkConfig.rpc}`);
+                // console.log(`Initializing network ${networkConfig.rpc}`);
                 const provider = new ethers.JsonRpcProvider(networkConfig.rpc, {
                     chainId: networkConfig.chainId,
                     name: networkConfig.name

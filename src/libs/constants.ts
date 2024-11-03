@@ -5,7 +5,7 @@ export const MAINNETS: Networks = {
     ethereum: {
         name: 'Ethereum',
         symbol: 'ETH',
-        rpc: 'https://eth-mainnet.public.blastapi.io',  // Changed to HTTPS
+        rpc: 'https://eth-mainnet.public.blastapi.io',
         scanner: 'https://api.etherscan.io/api',
         scannerKey: 'EXH4AW2DIIBUTZQHQ6HR9AYBEAR1VSTNFH',
         currency: 'ETH',
@@ -16,7 +16,7 @@ export const MAINNETS: Networks = {
     bsc: {
         name: 'BNB Smart Chain',
         symbol: 'BNB',
-        rpc: 'https://bsc-dataseed1.binance.org',  // Changed to HTTPS
+        rpc: 'https://bsc-dataseed1.binance.org',
         scanner: 'https://api.bscscan.com/api',
         scannerKey: 'TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J',
         currency: 'BNB',
@@ -27,7 +27,7 @@ export const MAINNETS: Networks = {
     arbitrum: {
         name: 'Arbitrum One',
         symbol: 'ETH',
-        rpc: 'https://arb1.arbitrum.io/rpc',  // Changed to HTTPS
+        rpc: 'https://arb1.arbitrum.io/rpc',
         scanner: 'https://api.arbiscan.io/api',
         scannerKey: '57J7NX18NCVJSEQ48KFMDIEJIS95IBFZJC',
         currency: 'ETH',
@@ -41,7 +41,7 @@ export const TESTNETS: Networks = {
     sepolia: {
         name: 'Sepolia',
         symbol: 'ETH',
-        rpc: 'https://eth-sepolia.public.blastapi.io',  // Changed to HTTPS
+        rpc: 'https://eth-sepolia.public.blastapi.io',
         scanner: 'https://api-sepolia.etherscan.io/api',
         scannerKey: 'EXH4AW2DIIBUTZQHQ6HR9AYBEAR1VSTNFH',
         currency: 'ETH',
@@ -52,7 +52,7 @@ export const TESTNETS: Networks = {
     bscTestnet: {
         name: 'BSC Testnet',
         symbol: 'BNB',
-        rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545',  // Changed to HTTPS
+        rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545',
         scanner: 'https://api-testnet.bscscan.com/api',
         scannerKey: 'TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J',
         currency: 'tBNB',
@@ -66,5 +66,8 @@ export const ERC20_ABI = [
     "function balanceOf(address owner) view returns (uint256)",
     "function decimals() view returns (uint8)",
     "function symbol() view returns (string)",
-    "function name() view returns (string)"
-];
+    "function transfer(address to, uint amount) returns (bool)",
+    "function allowance(address owner, address spender) view returns (uint256)",
+    "function approve(address spender, uint value) returns (bool)",
+    "event Transfer(address indexed from, address indexed to, uint amount)"
+  ];
