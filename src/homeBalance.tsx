@@ -5,12 +5,12 @@ import { ethers, Wallet, JsonRpcProvider } from "ethers";
 import blockies from 'ethereum-blockies';
 import * as bip39 from "bip39";
 import { FaGear } from "react-icons/fa6";
-import { CopyFilled, DislikeOutlined, QrcodeOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
+import { CopyFilled, DislikeOutlined, LikeOutlined, QrcodeOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 import IconButton from './libs/IconButton';
 import { MultiChainWalletScanner } from './libs/scanner';
-import { TokenBalance } from './libs/types';
+import { TokenBalance, Transaction, NFTBalance } from './libs/types';
 import { TESTNETS, MAINNETS } from './libs/constants';
 
 
@@ -106,7 +106,7 @@ const WalletInfo: React.FC = () => {
     }
   }
 
-  // Функция для проверки баланса ETH
+  // Функция для проверки аланса ETH
   async function checkBalance() {
     setLoading(true);
     try {
@@ -181,7 +181,7 @@ const WalletInfo: React.FC = () => {
                 ))}
               </Select>
             </div>
-            <div className="sectionTokens-home">
+            <div className="selectSection-home listTokens-home">
               {getFilteredTokens().map((token, index) => (
                 <div key={`${token.network}-${token.address}-${index}`} className="token">
                   <div className="IconName-home">
@@ -214,12 +214,71 @@ const WalletInfo: React.FC = () => {
             </div>
           </>
         );
-      case 'nfts':
-        return <div className="sectionTokens-home">Content for NFT's</div>;
+        case 'nfts':
+          return (
+              <div className="selectSection-home nfts-home">
+                  {loading ? (
+                      <div className="loading">Loading NFTs...</div>
+                  ) : (
+                      <div className="nft-list">
+                          {nfts.map((nft, index) => (
+                              <div key={`${nft.contractAddress}-${nft.tokenId}`} className="nft-item">
+                                  <div className="nft-details">
+                                      <div className="nft-name">
+                                          {nft.name} #{nft.tokenId}
+                                      </div>
+                                      <div className="nft-date">
+                                          {new Date(nft.timestamp).toLocaleString()}
+                                      </div>
+                                      <div className="nft-network">
+                                          {nft.networkName}
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+          </div>
+        );
       case 'history':
-        return <div className="sectionTokens-home">Transaction History</div>;
+        return (
+          <div className="selectSection-home history-home">
+            {loading ? (
+              <div className="loading">Loading transactions...</div>
+            ) : (
+              <div className="transactions-list">
+                {transactions.map((tx, index) => (
+                  <div key={`${tx.hash}-${index}`} className="transaction-item">
+                    <div className="transaction-icon">
+                      {tx.type === 'send' ? <DislikeOutlined /> : <LikeOutlined />}
+                    </div>
+                    <div className="transaction-details">
+                      <div className="transaction-type">
+                        {tx.type === 'send' ? 'Sent' : 'Received'} 
+                        {tx.tokenSymbol ? ` ${tx.tokenSymbol}` : ` ${getCurrentNetworks()[tx.network].symbol}`}
+                      </div>
+                      <div className="transaction-amount">
+                        {tx.tokenAmount || tx.value} 
+                        {tx.tokenSymbol || getCurrentNetworks()[tx.network].symbol}
+                      </div>
+                      <div className="transaction-date">
+                        {new Date(tx.timestamp).toLocaleString()}
+                      </div>
+                      <div className="transaction-network">
+                        {getCurrentNetworks()[tx.network].name}
+                      </div>
+                      <div className={`transaction-status ${tx.status}`}>
+                        {tx.status}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       default:
-        return <div className="sectionTokens-home">Soon...</div>;
+        return <div className="selectSection-home soon-home">Soon...</div>;
     }
   };
 
@@ -342,7 +401,7 @@ const WalletInfo: React.FC = () => {
     setProvider(newProvider);
   }, [isTestnet]);
 
-  // Инициализация wallet с provider
+  // Инициализция wallet с provider
   useEffect(() => {
     if (privateKey && provider) {
       const newWallet = new ethers.Wallet(privateKey, provider);
@@ -355,6 +414,11 @@ const WalletInfo: React.FC = () => {
   };
 
   const handleSwapClick = () => {
+    const isTestnet = localStorage.getItem('isTestnet') === 'true';
+    if (isTestnet) {
+      message.error('Swap is not available in testnet mode');
+      return;
+    }
     navigate('/swap');
   };
 
@@ -374,6 +438,138 @@ const WalletInfo: React.FC = () => {
       }));
     }
   }, [wallet]);
+
+  // Добавьте новое состояние для транзакций
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // Функция для получения истории транзакций
+  const getTransactionHistory = async () => {
+    if (!wallet || !provider) return;
+
+    try {
+      setLoading(true);
+      const networks = isTestnet ? TESTNETS : MAINNETS;
+      const allTransactions: Transaction[] = [];
+
+      for (const [networkId, network] of Object.entries(networks)) {
+        try {
+          const response = await axios.get(network.scanner, {
+            params: {
+              module: 'account',
+              action: 'txlist',
+              address: wallet.address,
+              startblock: 0,
+              endblock: 99999999,
+              sort: 'desc',
+              apikey: network.scannerKey
+            }
+          });
+
+          if (response.data.status === '1' && response.data.result) {
+            const networkTxs = response.data.result.map((tx: any) => ({
+              hash: tx.hash,
+              from: tx.from,
+              to: tx.to,
+              value: tx.value ? ethers.formatEther(tx.value) : '0',
+              timestamp: parseInt(tx.timeStamp) * 1000,
+              type: tx.from.toLowerCase() === wallet.address.toLowerCase() ? 'send' : 'receive',
+              network: networkId,
+              status: tx.isError === '0' ? 'success' : 'failed'
+            }));
+
+            allTransactions.push(...networkTxs);
+          }
+
+          // Получаем также ERC20 транзакции
+          const tokenTxResponse = await axios.get(network.scanner, {
+            params: {
+              module: 'account',
+              action: 'tokentx',
+              address: wallet.address,
+              startblock: 0,
+              endblock: 99999999,
+              sort: 'desc',
+              apikey: network.scannerKey
+            }
+          });
+
+          if (tokenTxResponse.data.status === '1' && tokenTxResponse.data.result) {
+            const tokenTxs = tokenTxResponse.data.result.map((tx: any) => {
+              try {
+                return {
+                  hash: tx.hash,
+                  from: tx.from,
+                  to: tx.to,
+                  tokenSymbol: tx.tokenSymbol,
+                  tokenAmount: tx.tokenDecimal ? 
+                    ethers.formatUnits(tx.value, parseInt(tx.tokenDecimal)) : 
+                    ethers.formatUnits(tx.value, 18),
+                  timestamp: parseInt(tx.timeStamp) * 1000,
+                  type: tx.from.toLowerCase() === wallet.address.toLowerCase() ? 'send' : 'receive',
+                  network: networkId,
+                  status: 'success'
+                };
+              } catch (error) {
+                console.error('Error processing token transaction:', error);
+                return null;
+              }
+            }).filter(tx => tx !== null);
+
+            allTransactions.push(...tokenTxs);
+          }
+        } catch (error) {
+          console.error(`Error fetching transactions for ${networkId}:`, error);
+        }
+      }
+
+      // Сортируем все транзакции по времени
+      allTransactions.sort((a, b) => b.timestamp - a.timestamp);
+      setTransactions(allTransactions);
+    } catch (error) {
+      console.error('Error fetching transaction history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Загружаем историю при монтировании и при изменении сети
+  useEffect(() => {
+    if (activeTab === 'history') {
+      getTransactionHistory();
+    }
+  }, [activeTab, isTestnet]);
+
+  const [nfts, setNfts] = useState<NFTBalance[]>([]);
+
+  // Функция для получения NFT
+  const getNFTs = async () => {
+    if (!wallet) return;
+
+    try {
+      setLoading(true);
+      const scanner = new MultiChainWalletScanner(wallet.privateKey);
+      const networks = isTestnet ? TESTNETS : MAINNETS;
+      let allNFTs: NFTBalance[] = [];
+
+      for (const networkId of Object.keys(networks)) {
+        const networkNFTs = await scanner.getNFTBalances(networkId);
+        allNFTs = [...allNFTs, ...networkNFTs];
+      }
+
+      setNfts(allNFTs);
+    } catch (error) {
+      console.error('Error fetching NFTs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Загружаем NFT при переключении на вкладку NFTs
+  useEffect(() => {
+    if (activeTab === 'nfts') {
+      getNFTs();
+    }
+  }, [activeTab, wallet, isTestnet]);
 
   return (
     <div className='container'>
@@ -439,6 +635,7 @@ const WalletInfo: React.FC = () => {
                   onClick={handleSwapClick}
                   className='qrButton-home button-home'
                   icon={<RetweetOutlined />}
+                  disabled={isTestnet}
                 >
                   Swap
                 </Button>

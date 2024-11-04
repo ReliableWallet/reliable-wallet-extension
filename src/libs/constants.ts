@@ -66,9 +66,20 @@ export const ERC20_ABI = [
     "function balanceOf(address owner) view returns (uint256)",
     "function decimals() view returns (uint8)",
     "function symbol() view returns (string)",
-     "function name() view returns (string)",
+    "function name() view returns (string)",
     "function transfer(address to, uint amount) returns (bool)",
     "function allowance(address owner, address spender) view returns (uint256)",
     "function approve(address spender, uint value) returns (bool)",
     "event Transfer(address indexed from, address indexed to, uint amount)"
   ];
+
+export const ALCHEMY_API_KEY = 't7bZADDohemojL-KHr4ecd6_VDC1PmZ-';
+
+export const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+
+export const UNISWAP_ROUTER_ABI = [
+  'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
+  'function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)',
+  'function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts)',
+  'function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)'
+];

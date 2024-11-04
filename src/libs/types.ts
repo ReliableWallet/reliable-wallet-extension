@@ -37,3 +37,26 @@ export interface TokenBalance {
     imageUrl?: string;
     networkImageUrl?: string;
 }
+
+export interface Transaction {
+    hash: string;
+    from: string;
+    to: string;
+    value: string;
+    timestamp: number;
+    tokenSymbol?: string;
+    tokenAmount?: string;
+    type: 'send' | 'receive' | 'swap';
+    network: string;
+    status: 'success' | 'failed' | 'pending';
+}
+
+export interface NFTBalance {
+    tokenId: string;
+    contractAddress: string;
+    name: string;
+    symbol: string;
+    network: string;
+    networkName: string;
+    timestamp: number;
+}

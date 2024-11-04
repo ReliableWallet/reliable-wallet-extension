@@ -1,12 +1,12 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
 import { MAINNETS, TESTNETS, ERC20_ABI } from './constants';
-import { TokenBalance, Networks } from './types';
+import { TokenBalance, Networks, NFTBalance } from './types';
 
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const RETRY_DELAY = 2000;
 const MAX_RETRIES = 5;
-const CHUNK_SIZE = 50; 
+const CHUNK_SIZE = 50;
 
 export class MultiChainWalletScanner {
     private privateKey: string;
@@ -17,25 +17,24 @@ export class MultiChainWalletScanner {
     private lastApiCall: number = 0;
     private tokenImageCache: { [symbol: string]: string } = {};
 
-
     constructor(
         privateKey: string,
         networks: Networks = MAINNETS
     ) {
         this.privateKey = privateKey;
-        
+
         localStorage.removeItem('networks');
-        
+
         const storedNetworks = localStorage.getItem('networks');
         const isTestnet = localStorage.getItem('isTestnet') === 'true';
-        
+
         if (storedNetworks) {
             this.networks = JSON.parse(storedNetworks);
         } else {
             this.networks = isTestnet ? TESTNETS : MAINNETS;
             localStorage.setItem('networks', JSON.stringify(this.networks));
         }
-        
+
         this.providers = {};
         this.wallets = {};
 
@@ -50,27 +49,27 @@ export class MultiChainWalletScanner {
                     chainId: networkConfig.chainId,
                     name: networkConfig.name
                 });
-                
+
                 try {
                     const networkPromise = Promise.race([
                         provider.ready,
-                        new Promise((_, reject) => 
+                        new Promise((_, reject) =>
                             setTimeout(() => reject(new Error('Network initialization timeout')), 10000)
                         )
                     ]);
-                    
+
                     await networkPromise;
-                    
+
                     const network = await provider.getNetwork();
                     if (network.chainId !== BigInt(networkConfig.chainId)) {
                         throw new Error(`Network ${networkId} chainId mismatch`);
                     }
-                    
+
                     const wallet = new ethers.Wallet(this.privateKey, provider);
-                    
+
                     this.providers[networkId] = provider;
                     this.wallets[networkId] = wallet;
-                    
+
                 } catch (error) {
                     console.error(`Error connecting to network ${networkId}:`, error);
                 }
@@ -83,7 +82,7 @@ export class MultiChainWalletScanner {
     private async waitForRateLimit(): Promise<void> {
         const now = Date.now();
         const timeSinceLastCall = now - this.lastApiCall;
-        
+
         if (timeSinceLastCall < RETRY_DELAY) {
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY - timeSinceLastCall));
         }
@@ -129,8 +128,8 @@ export class MultiChainWalletScanner {
     }
 
     private async isLegitToken(
-        contract: ethers.Contract, 
-        balance: string, 
+        contract: ethers.Contract,
+        balance: string,
         symbol: string,
         name: string
     ): Promise<boolean> {
@@ -150,9 +149,9 @@ export class MultiChainWalletScanner {
 
             const upperSymbol = symbol.toUpperCase();
             const upperName = name.toUpperCase();
-            
-            if (suspiciousPatterns.some(pattern => 
-                upperSymbol.includes(pattern) || 
+
+            if (suspiciousPatterns.some(pattern =>
+                upperSymbol.includes(pattern) ||
                 upperName.includes(pattern)
             )) {
                 return false;
@@ -242,7 +241,7 @@ export class MultiChainWalletScanner {
                     }
 
                     const formattedBalance = ethers.formatUnits(balance, decimals);
-                    
+
                     if (!(await this.isLegitToken(contract, formattedBalance, symbol, name))) {
                         continue;
                     }
@@ -273,7 +272,7 @@ export class MultiChainWalletScanner {
 
     async getAllTokenBalances(): Promise<TokenBalance[]> {
         await this.ensureNetworksInitialized();
-        
+
         const allBalances: TokenBalance[] = [];
         const networks = Object.keys(this.networks);
 
@@ -336,7 +335,7 @@ export class MultiChainWalletScanner {
                 'BNB': 'binancecoin',  // Убедимся, что это правильный ID для BNB
                 'TBNB': 'binancecoin', // Добавим маппинг для тестового BNB
                 'tBNB': 'binancecoin',
-              };
+            };
             this.tokenIdMapCache = popularTokens;
             return popularTokens;
         } catch (error) {
@@ -347,7 +346,7 @@ export class MultiChainWalletScanner {
 
     private async getTokenImage(symbol: string, isNativeToken: boolean, networkId: string): Promise<string | undefined> {
         const cacheKey = isNativeToken ? `native-${networkId}` : symbol;
-        
+
         if (this.tokenImageCache[cacheKey]) {
             return this.tokenImageCache[cacheKey];
         }
@@ -377,12 +376,11 @@ export class MultiChainWalletScanner {
         return undefined;
     }
 
-
     async getTokenPrices(tokenBalances: TokenBalance[]): Promise<{ [key: string]: number }> {
         try {
             const symbols = [...new Set(tokenBalances.map(token => {
                 // Нормализуем символы для всех сетей
-                switch(token.network) {
+                switch (token.network) {
                     case 'bscTestnet':
                         return 'BNB';
                     case 'sepolia':
@@ -391,7 +389,7 @@ export class MultiChainWalletScanner {
                         return token.symbol;
                 }
             }))];
-            
+
             const idMap = await this.getTokenIdMap();
             const prices: { [key: string]: number } = {};
 
@@ -406,7 +404,7 @@ export class MultiChainWalletScanner {
 
                 try {
                     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                    
+
                     const response = await axios.get(`${COINGECKO_BASE_URL}/simple/price`, {
                         params: {
                             ids: tokenIds,
@@ -420,14 +418,14 @@ export class MultiChainWalletScanner {
                             const price = response.data[id].usd;
                             // Сохраняем цену для всех вариантов символа
                             prices[symbol] = price;
-                            
+
                             // Для BNB сохраняем цену под всеми возможными символами
                             if (symbol === 'BNB') {
                                 prices['BNB'] = price;
                                 prices['tBNB'] = price;
                                 prices['TBNB'] = price;
                             }
-                            
+
                             // Для ETH сохраняем цену под всеми возможными символами
                             if (symbol === 'ETH') {
                                 prices['ETH'] = price;
@@ -453,9 +451,67 @@ export class MultiChainWalletScanner {
         }
     }
 
+    async getNFTBalances(networkId: string): Promise<NFTBalance[]> {
+        const wallet = this.wallets[networkId];
+        const network = this.networks[networkId];
+
+        if (!wallet || !network) return [];
+
+        try {
+            // Получаем ERC-721 транзакции
+            const response = await axios.get(network.scanner, {
+                params: {
+                    module: 'account',
+                    action: 'tokennfttx', // Специальный endpoint для NFT транзакций
+                    address: wallet.address,
+                    startblock: 0,
+                    endblock: 99999999,
+                    sort: 'desc',
+                    apikey: network.scannerKey
+                }
+            });
+
+            if (response.data.status === '1' && response.data.result) {
+                const nfts = response.data.result.map((tx: any) => ({
+                    tokenId: tx.tokenID,
+                    contractAddress: tx.contractAddress,
+                    name: tx.tokenName,
+                    symbol: tx.tokenSymbol,
+                    network: networkId,
+                    networkName: network.name,
+                    timestamp: parseInt(tx.timeStamp) * 1000
+                }));
+
+                // Фильтруем только те NFT, которые все еще принадлежат кошельку
+                const ownedNFTs = await Promise.all(
+                    nfts.map(async (nft) => {
+                        const contract = new ethers.Contract(
+                            nft.contractAddress,
+                            ['function ownerOf(uint256) view returns (address)'],
+                            wallet
+                        );
+                        try {
+                            const owner = await contract.ownerOf(nft.tokenId);
+                            return owner.toLowerCase() === wallet.address.toLowerCase() ? nft : null;
+                        } catch {
+                            return null;
+                        }
+                    })
+                );
+
+                return ownedNFTs.filter((nft): nft is NFTBalance => nft !== null);
+            }
+        } catch (error) {
+            console.error(`Error getting NFTs for network ${networkId}:`, error);
+        }
+
+        return [];
+    }
+
+
     async getEnrichedTokenBalances(): Promise<TokenBalance[]> {
         await this.ensureNetworksInitialized();
-        
+
         const balances = await this.getAllTokenBalances();
         const prices = await this.getTokenPrices(balances);
 
