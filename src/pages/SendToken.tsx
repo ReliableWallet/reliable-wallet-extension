@@ -6,6 +6,7 @@ import { ERC20_ABI, TESTNETS, MAINNETS } from '../libs/constants';
 import { TokenBalance } from '../libs/types';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from '../libs/IconButton';
+import { MultiChainWalletScanner } from '../libs/scanner';
 
 const SendToken: React.FC = () => {
     const [selectedToken, setSelectedToken] = useState<string>('');
@@ -51,6 +52,24 @@ const SendToken: React.FC = () => {
             setProvider(newProvider);
         }
     }, []);
+
+    // Функция для обновления балансов
+    const updateBalances = async () => {
+        if (!wallet) return;
+        
+        try {
+            const scanner = new MultiChainWalletScanner(wallet.privateKey);
+            const enrichedTokens = await scanner.getEnrichedTokenBalances();
+            setTokens(enrichedTokens);
+        } catch (error) {
+            console.error('Error updating balances:', error);
+        }
+    };
+
+    // Обновляем балансы при изменении сети
+    useEffect(() => {
+        updateBalances();
+    }, [wallet, provider]);
 
     // Функция для обновления информации о газе
     const updateGasInfo = async () => {
@@ -229,7 +248,7 @@ const SendToken: React.FC = () => {
     };
 
     // Обновляем провайдер при выборе токена
-    const handleTokenSelect = (value: string) => {
+    const handleTokenSelect = async (value: string) => {
         setSelectedToken(value);
         const [_, network] = value.split('-');
         const networkConfig = getNetworkForToken(network);
@@ -241,6 +260,8 @@ const SendToken: React.FC = () => {
             if (wallet) {
                 const newWallet = new ethers.Wallet(wallet.privateKey, newProvider);
                 setWallet(newWallet);
+                // Обновляем балансы после смены сети
+                await updateBalances();
             }
         }
     };
