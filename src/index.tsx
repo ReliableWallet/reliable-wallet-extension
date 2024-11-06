@@ -11,6 +11,7 @@ import QrCode from './QrCode';
 import Networks from './settingsList/networks';
 import SendToken from './pages/SendToken';
 import SwapToken from './pages/SwapToken';
+import Backup from './settingsList/backup';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
@@ -28,6 +29,7 @@ root.render(
         <Route path="/Networks" element={<Networks />} />
         <Route path="/send" element={<SendToken />} />
         <Route path="/swap" element={<SwapToken />} />
+        <Route path="/backup" element={<Backup />} />
       </Routes>
     </HashRouter>
   </React.StrictMode>

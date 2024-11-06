@@ -25,7 +25,6 @@ const { Title, Text } = Typography;
 // const provider = new WebSocketProvider("https://data-seed-prebsc-1-s1.bnbchain.org:8545");
 
 const WalletInfo: React.FC = () => {
-  const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
   const [ShortAddress, setShortAddress] = useState<string | null>(null);
@@ -45,16 +44,6 @@ const WalletInfo: React.FC = () => {
 
   const textStyles = {
     color: 'rgba(255, 255, 255)',
-  }
-
-  // Функция для получения приватного ключа из мнемонической фразы
-  async function getPrivateKeyFromMnemonic(mnemonic: string) {
-    if (!bip39.validateMnemonic(mnemonic)) {
-      throw new Error("Invalid mnemonic phrase");
-    }
-
-    const wallet = Wallet.fromPhrase(mnemonic);
-    return wallet.privateKey;
   }
 
   // Функция для получения адреса из приватного ключа
@@ -110,18 +99,14 @@ const WalletInfo: React.FC = () => {
   async function checkBalance() {
     setLoading(true);
     try {
-      if (!mnemonic) {
-        throw new Error("Мнемоническая фраза не найдена");
+      if (!privateKey) {
+        throw new Error("Private key not found");
       }
 
-      const scanner = new MultiChainWalletScanner(
-        Wallet.fromPhrase(mnemonic).privateKey
-      );
-
+      const scanner = new MultiChainWalletScanner(privateKey);
       const enrichedTokens = await scanner.getEnrichedTokenBalances();
       setTokens(enrichedTokens);
 
-      // Подсчет общего баланса в USD
       const totalUSD = enrichedTokens.reduce((sum, token) => {
         const balance = parseFloat(token.balance as string);
         return sum + (token.price || 0) * balance;
@@ -129,7 +114,7 @@ const WalletInfo: React.FC = () => {
 
       setTotalBalanceUSD(totalUSD.toFixed(2));
     } catch (error) {
-      console.error("Ошибка при проверке баланса:", error);
+      console.error("Error checking balance:", error);
     } finally {
       setLoading(false);
     }
@@ -144,21 +129,6 @@ const WalletInfo: React.FC = () => {
     }
   }
 
-  async function getMnemonic() {
-    const mnemonic = localStorage.getItem('walletMnemonic');
-    if (mnemonic) {
-      setMnemonic(mnemonic);
-    }
-  }
-
-  // mnemonic
-  useEffect(() => {
-    // Получаем мнемоническую фразу из localStorage при монтировании кмпонента
-    const storedMnemonic = localStorage.getItem('walletMnemonic');
-    if (storedMnemonic) {
-      setMnemonic(storedMnemonic);
-    }
-  }, []);
 
   // Функция для рендера контента в зависимости от выбранной вкладки
   const renderContent = () => {
@@ -214,30 +184,30 @@ const WalletInfo: React.FC = () => {
             </div>
           </>
         );
-        case 'nfts':
-          return (
-              <div className="selectSection-home nfts-home">
-                  {loading ? (
-                      <div className="loading">Loading NFTs...</div>
-                  ) : (
-                      <div className="nft-list">
-                          {nfts.map((nft, index) => (
-                              <div key={`${nft.contractAddress}-${nft.tokenId}`} className="nft-item">
-                                  <div className="nft-details">
-                                      <div className="nft-name">
-                                          {nft.name} #{nft.tokenId}
-                                      </div>
-                                      <div className="nft-date">
-                                          {new Date(nft.timestamp).toLocaleString()}
-                                      </div>
-                                      <div className="nft-network">
-                                          {nft.networkName}
-                                      </div>
-                                  </div>
-                              </div>
-                          ))}
+      case 'nfts':
+        return (
+          <div className="selectSection-home nfts-home">
+            {loading ? (
+              <div className="loading">Loading NFTs...</div>
+            ) : (
+              <div className="nft-list">
+                {nfts.map((nft, index) => (
+                  <div key={`${nft.contractAddress}-${nft.tokenId}`} className="nft-item">
+                    <div className="nft-details">
+                      <div className="nft-name">
+                        {nft.name} #{nft.tokenId}
                       </div>
-                  )}
+                      <div className="nft-date">
+                        {new Date(nft.timestamp).toLocaleString()}
+                      </div>
+                      <div className="nft-network">
+                        {nft.networkName}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       case 'history':
@@ -254,11 +224,11 @@ const WalletInfo: React.FC = () => {
                     </div>
                     <div className="transaction-details">
                       <div className="transaction-type">
-                        {tx.type === 'send' ? 'Sent' : 'Received'} 
+                        {tx.type === 'send' ? 'Sent' : 'Received'}
                         {tx.tokenSymbol ? ` ${tx.tokenSymbol}` : ` ${getCurrentNetworks()[tx.network].symbol}`}
                       </div>
                       <div className="transaction-amount">
-                        {tx.tokenAmount || tx.value} 
+                        {tx.tokenAmount || tx.value}
                         {tx.tokenSymbol || getCurrentNetworks()[tx.network].symbol}
                       </div>
                       <div className="transaction-date">
@@ -282,45 +252,24 @@ const WalletInfo: React.FC = () => {
     }
   };
 
-
-  // privateKey
   useEffect(() => {
-    if (mnemonic) {
-      getPrivateKeyFromMnemonic(mnemonic)
-        .then(privateKey => {
-          // Сохраням приватный ключ в localStorage
-          localStorage.setItem('walletPrivateKey', privateKey);
+    localStorage.setItem('walletAddress', address);
+  }, [address]);
+  
+//   useEffect(() => {
+//     localStorage.setItem('walletAvatar', avatarImage);
+// });
 
-          // Устанавливаем адрес (или приватный ключ) в состояние компонента
-          setPrivateKey(privateKey);
-        })
-        .catch(error => {
-          console.error("Error getting private key:", error);
-        });
+
+  // Функция для получения адреса из приватного ключа
+  useEffect(() => {
+    const storedPrivateKey = localStorage.getItem('walletPrivateKey');
+    if (storedPrivateKey) {
+      setPrivateKey(storedPrivateKey);
+      const wallet = new ethers.Wallet(storedPrivateKey);
+      setAddress(wallet.address);
     }
-  }, [mnemonic]);
-
-  useEffect(() => {
-    // Установка провайдера при монтировании компонента
-    setUserProviderFromLocalStorage();
   }, []);
-
-  // balance
-  useEffect(() => {
-    if (mnemonic) {
-      checkBalance();
-    }
-  }, [mnemonic]);
-
-  // address
-  useEffect(() => {
-    if (privateKey) {
-      getAddressFromPrivateKey(privateKey).then(address => {
-        setAddress(address)
-        localStorage.setItem('walletAddress', address);
-      });
-    }
-  }, [privateKey]);
 
   // short addres
   useEffect(() => {
@@ -333,12 +282,11 @@ const WalletInfo: React.FC = () => {
   // avatar
   useEffect(() => {
     // Попытка получить аватарку из localStorage при загрузке страницы
-
     const savedAvatar = localStorage.getItem('walletAvatar');
-    if (savedAvatar && savedAvatar && savedAvatar.length > 240) {
+    if (savedAvatar && savedAvatar.length > 240) {
       setAvatarImage(savedAvatar);
     } else if (address) {
-      console.log("ahuets")
+      console.log("ahuets", savedAvatar)
       // Если аватарки в localStorage нет, генерируем новую
       getAvatarFromAddress(address).then(avatarUrl => {
         localStorage.setItem('walletAvatar', avatarUrl); // Сохраняем аватар в localStorage
@@ -501,8 +449,8 @@ const WalletInfo: React.FC = () => {
                   from: tx.from,
                   to: tx.to,
                   tokenSymbol: tx.tokenSymbol,
-                  tokenAmount: tx.tokenDecimal ? 
-                    ethers.formatUnits(tx.value, parseInt(tx.tokenDecimal)) : 
+                  tokenAmount: tx.tokenDecimal ?
+                    ethers.formatUnits(tx.value, parseInt(tx.tokenDecimal)) :
                     ethers.formatUnits(tx.value, 18),
                   timestamp: parseInt(tx.timeStamp) * 1000,
                   type: tx.from.toLowerCase() === wallet.address.toLowerCase() ? 'send' : 'receive',
@@ -564,12 +512,19 @@ const WalletInfo: React.FC = () => {
     }
   };
 
-  // Загружаем NFT при переключении на вкладку NFTs
+  // Загружаем NFT при переключении на владку NFTs
   useEffect(() => {
     if (activeTab === 'nfts') {
       getNFTs();
     }
   }, [activeTab, wallet, isTestnet]);
+
+  // В компоненте WalletInfo добавим эффект для проверки баланса при монтировании
+  useEffect(() => {
+    if (privateKey) {
+      checkBalance();
+    }
+  }, [privateKey]);
 
   return (
     <div className='container'>
@@ -643,19 +598,19 @@ const WalletInfo: React.FC = () => {
             </div>
 
             <div className="sectionBalance-home">
-              <Button 
+              <Button
                 className='balanceButton-home'
                 onClick={() => setActiveTab('tokens')}
               >
                 TOKENS
               </Button>
-              <Button 
+              <Button
                 className='balanceButton-home'
                 onClick={() => setActiveTab('nfts')}
               >
                 NFT's
               </Button>
-              <Button 
+              <Button
                 className='balanceButton-home'
                 onClick={() => setActiveTab('history')}
               >

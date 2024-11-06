@@ -44,12 +44,11 @@ h3 {
     align-items: center;
     width: 100%;
     height: 100%;
-    /* padding: 20px; */
     overflow-y: scroll;
     scrollbar-width: none;
 }
 
-/* Стили для Select и Input, чтобы они занимали всю доступную ширину */
+/* Стили для Select и Input */
 .column-swapTokens .network-select,
 .column-swapTokens .token-select,
 .column-swapTokens .ant-input,
@@ -75,45 +74,46 @@ h3 {
 }
 
 /* Стили для модального окна */
-.modal-container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
-    width: 90%;
-    max-width: 300px;
+.swap-modal {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-width: 90% !important;
+    width: 320px !important;
 }
 
-.column-swapTokens .ant-modal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: 0;
-    width: 90% !important;
-    max-width: 300px;
+/* Контейнер содержимого модального окна */
+.swap-modal .ant-modal-content {
+    background-color: #282c34 !important;
+    color: white !important;
+    width: 100% !important;
 }
 
-.column-swapTokens .ant-modal-content {
-    width: 100%;
+.swap-modal .ant-modal-header {
+    background-color: #282c34 !important;
+    border-bottom: 1px solid rgba(255, 192, 203, 0.2) !important;
 }
 
-.column-swapTokens .ant-modal-mask,
-.column-swapTokens .ant-modal-wrap {
-    position: absolute;
+.swap-modal .ant-modal-title {
+    color: white !important;
 }
 
-/* Стили для контейнера сообщений */
-/* .message-container {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1001;
-    width: 90%;
-    max-width: 300px;
-} */
+.swap-modal .ant-modal-close {
+    color: white !important;
+}
+
+.swap-modal .ant-modal-footer {
+    border-top: 1px solid rgba(255, 192, 203, 0.2) !important;
+}
+
+/* Стили для обертки модального окна */
+.swap-modal .ant-modal-wrap {
+    position: absolute !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 
 /* Адаптивные стили */
 @media (max-width: 400px) {
@@ -123,9 +123,7 @@ h3 {
     .token-select,
     .ant-input,
     .ant-btn,
-    .swap-info,
-    .modal-container,
-    .column-swapTokens .ant-modal {
+    .swap-info {
         max-width: 90%;
     }
 }

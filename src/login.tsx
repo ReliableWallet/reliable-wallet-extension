@@ -21,34 +21,61 @@ const Login: React.FC = () => {
   const validateAndLogin = async () => {
     setLoading(true);
     try {
-      const words = input.trim().split(/\s+/);
-      if (words.length !== 12) {
-        throw new Error('Пожалуйста, введите мнемоническую фразу из 12 слов.');
+      const trimmedInput = input.trim();
+      
+      // Проверяем, является ли ввод мнемонической фразой
+      const words = trimmedInput.split(/\s+/);
+      if (words.length === 12) {
+        try {
+          // Пробуем создать кошелек из мнемоники
+          const wallet = ethers.Wallet.fromPhrase(trimmedInput);
+          
+          // Сохраняем мнемонику и приватный ключ
+          localStorage.setItem('walletMnemonic', trimmedInput);
+          localStorage.setItem('walletPrivateKey', wallet.privateKey);
+
+          message.success({
+            content: 'Successfully logged in with mnemonic phrase!',
+            duration: 1.5,
+          });
+          
+          localStorage.setItem('walletAvatar', "");
+          navigate('/homeBalance');
+          return;
+        } catch (error) {
+          throw new Error('Invalid mnemonic phrase');
+        }
       }
 
-      try {
-        const ethereumWallet = ethers.Wallet.fromPhrase(input.trim());
-        const mnemonic = input.trim();
+      // Проверяем, является ли ввод приватным ключом
+      if (trimmedInput.startsWith('0x') && trimmedInput.length === 66) {
+        try {
+          // Пробуем создать кошелек из приватного ключа
+          const wallet = new ethers.Wallet(trimmedInput);
+          
+          // Сохраняем приватный ключ
+          localStorage.setItem('walletPrivateKey', trimmedInput);
+          localStorage.setItem('walletMnemonic', ''); // Очищаем мнемонику
 
-        // Сохраняем только мнемоническую фразу в localStorage
-        localStorage.setItem('walletMnemonic', mnemonic);
-
-        message.success({
-          content: 'Успешный вход в Ethereum кошелек!',
-          duration: 1.5,
-        });
-
-        localStorage.setItem('walletAvatar', "");
-
-
-        navigate('/homeBalance');  // Перенаправляем на страницу homeBalance
-      } catch (error) {
-        throw new Error('Неверная мнемоническая фраза для Ethereum');
+          message.success({
+            content: 'Successfully logged in with private key!',
+            duration: 1.5,
+          });
+          
+          localStorage.setItem('walletAvatar', "");
+          navigate('/homeBalance');
+          return;
+        } catch (error) {
+          throw new Error('Invalid private key');
+        }
       }
+
+      throw new Error('Please enter a valid 12-word mnemonic phrase or private key');
+
     } catch (error) {
       console.error('Error during login:', error);
       message.error({
-        content: error.message || 'Произошла ошибка при входе',
+        content: error.message || 'Login error occurred',
         duration: 1.5,
       });
     } finally {
@@ -65,21 +92,24 @@ const Login: React.FC = () => {
   return (
     <div className='container'>
       <header className="header">
-        <IconButton className="back-icon" style={{}} icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} onClick={() => navigate(-1)} />
-
-        <h1>Вход в кошелек</h1>
+        <IconButton 
+          className="back-icon" 
+          icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} 
+          onClick={() => navigate(-1)} 
+        />
+        <h1>Login to Wallet</h1>
       </header>
 
       <div className="body">
         <div className="content">
           <div className="message-container"></div>
 
-          <p>Введите вашу мнемоническую фразу из 12 слов для Ethereum:</p>
+          <p>Enter your 12-word mnemonic phrase or private key:</p>
           <TextArea
             rows={4}
             value={input}
             onChange={handleInputChange}
-            placeholder="Мнемоническая фраза из 12 слов"
+            placeholder="Mnemonic phrase or private key"
             className='input-field'
           />
           <Button
@@ -88,7 +118,7 @@ const Login: React.FC = () => {
             loading={loading}
             className='login-button'
           >
-            Войти
+            Login
           </Button>
         </div>
       </div>

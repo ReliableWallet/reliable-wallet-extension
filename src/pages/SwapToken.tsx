@@ -143,7 +143,7 @@ const SwapToken: React.FC = () => {
       const [fromSymbol, fromNetwork] = fromToken.split('-');
       const [toSymbol, toNetwork] = toToken.split('-');
 
-      // Пр��веряем, что токены разные
+      // Прверяем, что токены разные
       if (fromSymbol === toSymbol) {
         message.error('Cannot swap token for itself');
         return;
@@ -548,10 +548,18 @@ const SwapToken: React.FC = () => {
             Sign and Send
           </Button>
         ]}
-        getContainer={() => document.querySelector('.content') || document.body}
-        className="modal-container"
-        mask={true}
-        maskClosable={true}
+        className="swap-modal"
+        styles={{
+          mask: {
+            position: 'absolute',
+            backgroundColor: 'rgba(0, 0, 0, 0.45)'
+          },
+          wrapper: {
+            position: 'absolute',
+            inset: 0
+          }
+        }}
+        getContainer={() => document.querySelector('.container') || document.body}
       >
         <div className="approval-content">
           <h4>Allow to spend</h4>

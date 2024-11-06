@@ -29,8 +29,10 @@ const Settings: React.FC = () => {
                         onClick={() => navigate('/networks')}
                         ><h3 className="h3-settings">Networks</h3>
                         </Button>
-                        <Button className="mainButton-settings"
-                        ><h3 className="h3-settings">soon...</h3>
+                        <Button 
+                        className="mainButton-settings"
+                        onClick={() => navigate('/backup')}
+                        ><h3 className="h3-settings">Backup Wallet</h3>
                         </Button>
                         <Button className="mainButton-settings"
                         ><h3 className="h3-settings">soon...</h3>
