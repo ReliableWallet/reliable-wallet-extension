@@ -27,10 +27,10 @@
 }
 
 .defaultButton {
-    border: 2px solid pink;
+    border: 2px solid pink !important;
     border-radius: 10px;
-    background-color: transparent;
-    color: pink;
+    background-color: transparent !important;
+    color: pink !important;
     font-weight: 600;
     font-size: 16px;
     cursor: pointer;
