@@ -49,7 +49,7 @@ const WalletInfo: React.FC = () => {
     color: 'rgba(255, 255, 255)',
   }
 
-  // Функция для получения адреса из пр��ватного ключа
+  // Функция для получения адреса из прватного ключа
   async function getAddressFromPrivateKey(privateKey: string) {
     const wallet = new Wallet(privateKey);
     setAddress(wallet.address);
@@ -581,6 +581,37 @@ const WalletInfo: React.FC = () => {
     setTotalBalanceUSD('0.00');
     setAvatarImage(null);
   };
+
+  // В начале компонента WalletInfo добавим эффект для проверки аккаунтов
+  useEffect(() => {
+    const savedAccounts = localStorage.getItem('walletAccounts');
+    const accounts = savedAccounts ? JSON.parse(savedAccounts) : [];
+    
+    if (accounts.length === 0) {
+      // Если аккаунтов нет, перенаправляем на домашнюю страницу
+      navigate('/');
+      return;
+    }
+
+    // Проверяем наличие текущего аккаунта
+    const currentAccount = localStorage.getItem('currentAccount');
+    if (!currentAccount) {
+      // Если текущий аккаунт не выбран, устанавливаем первый аккаунт как текущий
+      const firstAccount = accounts[0];
+      setCurrentAccount(firstAccount);
+      localStorage.setItem('currentAccount', JSON.stringify(firstAccount));
+      setPrivateKey(firstAccount.privateKey);
+      setAddress(firstAccount.address);
+
+      // Генерируем аватар для первого аккаунта
+      if (firstAccount.address) {
+        getAvatarFromAddress(firstAccount.address).then(avatarUrl => {
+          localStorage.setItem('walletAvatar', avatarUrl);
+          setAvatarImage(avatarUrl);
+        });
+      }
+    }
+  }, [navigate]); // Добавляем navigate в зависимости эффекта
 
   return (
     <div className='container'>
