@@ -109,6 +109,7 @@ const WalletInfo: React.FC = () => {
       const scanner = new MultiChainWalletScanner(privateKey);
       const enrichedTokens = await scanner.getEnrichedTokenBalances();
       setTokens(enrichedTokens);
+      localStorage.setItem('tokens', JSON.stringify(enrichedTokens));
 
       const totalUSD = enrichedTokens.reduce((sum, token) => {
         const balance = parseFloat(token.balance as string);
@@ -584,6 +585,7 @@ const WalletInfo: React.FC = () => {
 
   // В начале компонента WalletInfo добавим эффект для проверки аккаунтов
   useEffect(() => {
+    // Восстанавливаем данные аккаунтов
     const savedAccounts = localStorage.getItem('walletAccounts');
     const accounts = savedAccounts ? JSON.parse(savedAccounts) : [];
     
@@ -593,9 +595,34 @@ const WalletInfo: React.FC = () => {
       return;
     }
 
-    // Проверяем наличие текущего аккаунта
-    const currentAccount = localStorage.getItem('currentAccount');
-    if (!currentAccount) {
+    // Восстанавливаем текущий аккаунт
+    const savedCurrentAccount = localStorage.getItem('currentAccount');
+    const currentAccountData = savedCurrentAccount ? JSON.parse(savedCurrentAccount) : null;
+
+    if (currentAccountData) {
+      // Если есть сохраненный текущий аккаунт, восстанавливаем его данные
+      setCurrentAccount(currentAccountData);
+      setPrivateKey(currentAccountData.privateKey);
+      setAddress(currentAccountData.address);
+      
+      // Восстанавливаем или генерируем аватар
+      const savedAvatar = localStorage.getItem('walletAvatar');
+      if (savedAvatar && savedAvatar.length > 240) {
+        setAvatarImage(savedAvatar);
+      } else if (currentAccountData.address) {
+        getAvatarFromAddress(currentAccountData.address).then(avatarUrl => {
+          localStorage.setItem('walletAvatar', avatarUrl);
+          setAvatarImage(avatarUrl);
+        });
+      }
+
+      // Восстанавливаем сохраненные токены
+      const savedTokens = localStorage.getItem('tokens');
+      if (savedTokens) {
+        setTokens(JSON.parse(savedTokens));
+      }
+
+    } else {
       // Если текущий аккаунт не выбран, устанавливаем первый аккаунт как текущий
       const firstAccount = accounts[0];
       setCurrentAccount(firstAccount);
@@ -603,7 +630,6 @@ const WalletInfo: React.FC = () => {
       setPrivateKey(firstAccount.privateKey);
       setAddress(firstAccount.address);
 
-      // Генерируем аватар для первого аккаунта
       if (firstAccount.address) {
         getAvatarFromAddress(firstAccount.address).then(avatarUrl => {
           localStorage.setItem('walletAvatar', avatarUrl);
@@ -611,7 +637,22 @@ const WalletInfo: React.FC = () => {
         });
       }
     }
-  }, [navigate]); // Добавляем navigate в зависимости эффекта
+
+    // Восстанавливаем настройки сети
+    const storedIsTestnet = localStorage.getItem('isTestnet') === 'true';
+    setIsTestnet(storedIsTestnet);
+
+    // Восстанавливаем провайдер
+    setUserProviderFromLocalStorage();
+
+  }, []); // Пустой массив зависимостей, так как это должно выполняться только при монтировании
+
+  // Добавим эффект для автоматического обновления баланса при восстановлении данных
+  useEffect(() => {
+    if (privateKey) {
+      checkBalance();
+    }
+  }, [privateKey]);
 
   return (
     <div className='container'>

@@ -20,10 +20,10 @@ root.render(
     <HashRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/HomeBalance" element={<HomeBalance />} />
         <Route path="/login" element={<Login />} />
         <Route path="/create" element={<Create />} />
         <Route path="/test" element={<Test />} />
-        <Route path="/HomeBalance" element={<HomeBalance />} />
         <Route path="/Settings" element={<Settings />} />
         <Route path="/QrCode" element={<QrCode />} />
         <Route path="/Networks" element={<Networks />} />

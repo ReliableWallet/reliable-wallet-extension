@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Flex } from "antd";
 
@@ -12,18 +12,36 @@ const buttonStyles = {
 const WalletEntry: React.FC = () => {
     const navigate = useNavigate();
 
+    useEffect(() => {
+        // Проверяем наличие сохраненных аккаунтов
+        const savedAccounts = localStorage.getItem('walletAccounts');
+        const accounts = savedAccounts ? JSON.parse(savedAccounts) : [];
+        
+        if (accounts.length > 0) {
+            // Если есть аккаунты, проверяем текущий аккаунт
+            const currentAccount = localStorage.getItem('currentAccount');
+            if (currentAccount) {
+                // Если есть текущий аккаунт, перенаправляем на страницу баланса
+                navigate('/HomeBalance');
+                return;
+            } else {
+                // Если нет текущего аккаунта, устанавливаем первый аккаунт как текущий
+                localStorage.setItem('currentAccount', JSON.stringify(accounts[0]));
+                navigate('/HomeBalance');
+                return;
+            }
+        }
+    }, [navigate]);
+
     const handleLogin = () => {
-        // console.log('Войти в кошелек');
         navigate("/login");
     };
 
     const handleCreateNewWallet = () => {
-        // console.log('Создать новый кошелек');
         navigate("/create");
     };
 
     const test = () => {
-        // console.log('test');
         navigate("/test");
     };
 
