@@ -15,10 +15,10 @@
     font-size: 14px;
 }
 
-.shortAddress-button {
+/* .shortAddress-button {
     position: absolute;
     left: 1em;
-}
+} */
 
 .shortAddress-button:hover {
     .copy-icon {
@@ -384,4 +384,22 @@
 
 .transaction-status.pending {
   color: #faad14;
+}
+
+.address-group {
+  position: absolute;
+  left: 1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-button {
+  padding: 4px 8px;
+  height: 100%;
+  border: none !important;
+}
+
+.copy-button:hover {
+  color: rgba(255, 192, 203, 0.8) !important;
 }

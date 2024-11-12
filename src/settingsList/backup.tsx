@@ -97,6 +97,7 @@ const Backup: React.FC = () => {
                   <h3>Mnemonic Phrase</h3>
                   <div style={{ position: 'relative' }}>
                     <TextArea
+                      className='textArea-backup'
                       value={showMnemonic ? mnemonic : maskText(mnemonic)}
                       readOnly
                       rows={4}
@@ -124,6 +125,7 @@ const Backup: React.FC = () => {
                   <h3 style={{ marginTop: '20px' }}>Private Key</h3>
                   <div style={{ position: 'relative' }}>
                     <TextArea
+                      className='textArea-backup'
                       value={showPrivateKey ? privateKey : maskText(privateKey)}
                       readOnly
                       rows={2}

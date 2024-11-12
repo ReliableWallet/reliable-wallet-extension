@@ -24,6 +24,9 @@ const { Title, Text } = Typography;
 // const provider = new WebSocketProvider("wss://bsc-testnet-rpc.publicnode.com");
 // const provider = new WebSocketProvider("https://data-seed-prebsc-1-s1.bnbchain.org:8545");
 
+import AccountManager from './components/AccountManager';
+import { WalletAccount } from './libs/types';
+
 const WalletInfo: React.FC = () => {
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
@@ -46,7 +49,7 @@ const WalletInfo: React.FC = () => {
     color: 'rgba(255, 255, 255)',
   }
 
-  // Функция для получения адреса из приватного ключа
+  // Функция для получения адреса из пр��ватного ключа
   async function getAddressFromPrivateKey(privateKey: string) {
     const wallet = new Wallet(privateKey);
     setAddress(wallet.address);
@@ -286,7 +289,6 @@ const WalletInfo: React.FC = () => {
     if (savedAvatar && savedAvatar.length > 240) {
       setAvatarImage(savedAvatar);
     } else if (address) {
-      console.log("ahuets", savedAvatar)
       // Если аватарки в localStorage нет, генерируем новую
       getAvatarFromAddress(address).then(avatarUrl => {
         localStorage.setItem('walletAvatar', avatarUrl); // Сохраняем аватар в localStorage
@@ -428,7 +430,7 @@ const WalletInfo: React.FC = () => {
             allTransactions.push(...networkTxs);
           }
 
-          // Получаем также ERC20 транзакции
+          // Получаем также ERC20 тразакции
           const tokenTxResponse = await axios.get(network.scanner, {
             params: {
               module: 'account',
@@ -526,12 +528,80 @@ const WalletInfo: React.FC = () => {
     }
   }, [privateKey]);
 
+  const [showAccountManager, setShowAccountManager] = useState(false);
+  const [currentAccount, setCurrentAccount] = useState<WalletAccount | null>(null);
+
+  // Добавить эффект для загрузки текущего аккаунта
+  useEffect(() => {
+    const savedAccount = localStorage.getItem('currentAccount');
+    if (savedAccount) {
+      const account = JSON.parse(savedAccount);
+      setCurrentAccount(account);
+      setPrivateKey(account.privateKey);
+      setAddress(account.address);
+
+      // Загружаем или генерируем аватар
+      const savedAvatar = localStorage.getItem('walletAvatar');
+      if (savedAvatar && savedAvatar.length > 240) {
+        setAvatarImage(savedAvatar);
+      } else if (account.address) {
+        getAvatarFromAddress(account.address).then(avatarUrl => {
+          localStorage.setItem('walletAvatar', avatarUrl);
+          setAvatarImage(avatarUrl);
+        });
+      }
+    }
+  }, []);
+
+  // Добавить функцию для переключения аккаунта
+  const handleSwitchAccount = (account: WalletAccount) => {
+    clearPreviousAccountData();
+    setCurrentAccount(account);
+    localStorage.setItem('currentAccount', JSON.stringify(account));
+    setPrivateKey(account.privateKey);
+    setAddress(account.address);
+    
+    // Генерируем новый аватар для аккаунта
+    if (account.address) {
+      getAvatarFromAddress(account.address).then(avatarUrl => {
+        localStorage.setItem('walletAvatar', avatarUrl);
+        setAvatarImage(avatarUrl);
+      });
+    }
+
+    setShowAccountManager(false);
+    checkBalance();
+  };
+
+  // Функция для очистки данных предыдущего аккаунта
+  const clearPreviousAccountData = () => {
+    localStorage.removeItem('walletAvatar');
+    localStorage.removeItem('tokens');
+    setTokens([]);
+    setTotalBalanceUSD('0.00');
+    setAvatarImage(null);
+  };
+
   return (
     <div className='container'>
 
       <header className='header'>
-        <button className='shortAddress-button defaultButton' onClick={copyToClipboard}> <CopyFilled className='copy-icon' twoToneColor={'pink'} /> {ShortAddress}</button>
-
+        <div className="address-group">
+          <button 
+            className='shortAddress-button defaultButton ' 
+            onClick={() => setShowAccountManager(true)}
+          >
+            {currentAccount?.name || ShortAddress}
+          </button>
+          <Button
+            icon={<CopyFilled />}
+            onClick={() => {
+              navigator.clipboard.writeText(address || '');
+              message.success('Address copied to clipboard');
+            }}
+            className='copy-button defaultButton'
+          />
+        </div>
 
         <IconButton
           icon={FaGear}
@@ -623,6 +693,13 @@ const WalletInfo: React.FC = () => {
 
         </div>
       </div>
+
+      <AccountManager
+        visible={showAccountManager}
+        onClose={() => setShowAccountManager(false)}
+        onSwitch={handleSwitchAccount}
+        currentAccount={currentAccount}
+      />
     </div>
 
   );

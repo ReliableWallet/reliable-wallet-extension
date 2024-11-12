@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Button, message } from 'antd';
 import { ethers } from 'ethers';
+import blockies from 'ethereum-blockies';
+import { WalletAccount } from './libs/types';
 
 import './css/login.css';
 import { FaArrowLeftLong } from 'react-icons/fa6';
@@ -13,6 +15,15 @@ const Login: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const getAvatarFromAddress = async (address: string): Promise<string> => {
+    let avatarUrl = "";
+    while (avatarUrl.length < 240) {
+      const avatar = blockies.create({ seed: address, size: 8, scale: 5 });
+      avatarUrl = avatar.toDataURL();
+    }
+    return avatarUrl;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -27,19 +38,29 @@ const Login: React.FC = () => {
       const words = trimmedInput.split(/\s+/);
       if (words.length === 12) {
         try {
-          // Пробуем создать кошелек из мнемоники
           const wallet = ethers.Wallet.fromPhrase(trimmedInput);
+          const avatar = await getAvatarFromAddress(wallet.address);
           
-          // Сохраняем мнемонику и приватный ключ
+          const newAccount: WalletAccount = {
+            id: Date.now().toString(),
+            name: 'Account 1',
+            privateKey: wallet.privateKey,
+            mnemonic: trimmedInput,
+            address: wallet.address,
+            avatar: avatar
+          };
+
+          localStorage.setItem('walletAccounts', JSON.stringify([newAccount]));
+          localStorage.setItem('currentAccount', JSON.stringify(newAccount));
           localStorage.setItem('walletMnemonic', trimmedInput);
           localStorage.setItem('walletPrivateKey', wallet.privateKey);
+          localStorage.setItem('walletAvatar', avatar);
 
           message.success({
             content: 'Successfully logged in with mnemonic phrase!',
             duration: 1.5,
           });
           
-          localStorage.setItem('walletAvatar', "");
           navigate('/homeBalance');
           return;
         } catch (error) {

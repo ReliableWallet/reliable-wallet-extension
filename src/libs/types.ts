@@ -60,3 +60,12 @@ export interface NFTBalance {
     networkName: string;
     timestamp: number;
 }
+
+export interface WalletAccount {
+    id: string;
+    name: string;
+    privateKey: string;
+    mnemonic?: string;
+    address: string;
+    avatar?: string;
+}

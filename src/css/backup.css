@@ -15,7 +15,7 @@
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
     max-width: 90% !important;
-    width: 320px !important;
+    /* width: 320px !important; */
 }
 
 /* Контейнер содержимого модального окна */
@@ -48,4 +48,8 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+}
+
+.textArea-backup {
+    resize: none !important;
 }
