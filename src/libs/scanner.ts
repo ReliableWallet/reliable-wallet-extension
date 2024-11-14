@@ -143,7 +143,7 @@ export class MultiChainWalletScanner {
             return await request();
         } catch (error: any) {
             if (retries > 0 && (error.status === 429 || error.code === 'RATE_LIMIT')) {
-                console.log(`Rate limit hit for ${networkId}, retrying in ${DELAY_BETWEEN_REQUESTS}ms...`);
+                // console.log(`Rate limit hit for ${networkId}, retrying in ${DELAY_BETWEEN_REQUESTS}ms...`);
                 await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
                 return this.retryRequest(networkId, request, retries - 1);
             }
@@ -253,7 +253,7 @@ export class MultiChainWalletScanner {
             // Проверяем наличие сканера для сети
             if (network.scanner && network.scannerKey) {
                 try {
-                    console.log(`Scanning network ${networkId} for tokens...`);
+                    // console.log(`Scanning network ${networkId} for tokens...`);
                     const tokensResponse = await axios.get(network.scanner, {
                         params: {
                             module: 'account',
@@ -264,20 +264,20 @@ export class MultiChainWalletScanner {
                         }
                     });
 
-                    console.log(`Response from ${networkId} scanner:`, {
-                        status: tokensResponse.data.status,
-                        message: tokensResponse.data.message,
-                        resultCount: tokensResponse.data.result ? tokensResponse.data.result.length : 0
-                    });
+                    // console.log(`Response from ${networkId} scanner:`, {
+                    //     status: tokensResponse.data.status,
+                    //     message: tokensResponse.data.message,
+                    //     resultCount: tokensResponse.data.result ? tokensResponse.data.result.length : 0
+                    // });
 
                     if (tokensResponse.data && 
                         tokensResponse.data.status === '1' && 
                         Array.isArray(tokensResponse.data.result)) {
                         
                         if (tokensResponse.data.result.length === 0) {
-                            console.log(`No token transactions found for network ${networkId} - wallet is new or empty`);
+                            // console.log(`No token transactions found for network ${networkId} - wallet is new or empty`);
                         } else {
-                            console.log(`Found ${tokensResponse.data.result.length} token transactions in ${networkId}`);
+                            // console.log(`Found ${tokensResponse.data.result.length} token transactions in ${networkId}`);
                         }
                         
                         // Создаем Set для уникальных адресов токенов
@@ -337,13 +337,13 @@ export class MultiChainWalletScanner {
                             }
                         }
                     } else {
-                        console.warn(`No token transactions found for network ${networkId}. Response:`, tokensResponse.data);
+                        // console.warn(`No token transactions found for network ${networkId}. Response:`, tokensResponse.data);
                     }
                 } catch (error) {
-                    console.log(`No scanner available for network ${networkId}, showing only native token`);
+                    // console.log(`No scanner available for network ${networkId}, showing only native token`);
                 }
             } else {
-                console.log(`Network ${networkId} doesn't have scanner configuration, showing only native token`);
+                // console.log(`Network ${networkId} doesn't have scanner configuration, showing only native token`);
             }
 
             return tokenBalances;
