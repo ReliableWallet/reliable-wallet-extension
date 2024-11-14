@@ -8,6 +8,7 @@ import { WalletAccount } from './libs/types';
 import './css/login.css';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from './libs/IconButton';
+import { TESTNETS, MAINNETS } from './libs/constants';
 
 const { TextArea } = Input;
 
@@ -34,7 +35,7 @@ const Login: React.FC = () => {
     try {
       const trimmedInput = input.trim();
       
-      // Проверяем, является ли ввод мнемонической фразой
+      // Проверяем, явл��ется ли ввод мнемонической фразой
       const words = trimmedInput.split(/\s+/);
       if (words.length === 12) {
         try {
@@ -50,11 +51,20 @@ const Login: React.FC = () => {
             avatar: avatar
           };
 
+          // Сохраняем все необходимые данные
           localStorage.setItem('walletAccounts', JSON.stringify([newAccount]));
           localStorage.setItem('currentAccount', JSON.stringify(newAccount));
           localStorage.setItem('walletMnemonic', trimmedInput);
           localStorage.setItem('walletPrivateKey', wallet.privateKey);
+          localStorage.setItem('walletAddress', wallet.address); // Добавляем сохранение адреса
           localStorage.setItem('walletAvatar', avatar);
+
+          // Устанавливаем начальные настройки сети
+          const isTestnet = localStorage.getItem('isTestnet') === 'true';
+          const networks = isTestnet ? TESTNETS : MAINNETS;
+          const defaultNetwork = Object.values(networks)[0];
+          localStorage.setItem('userProvider', defaultNetwork.rpc);
+          localStorage.setItem('networks', JSON.stringify(networks));
 
           message.success({
             content: 'Successfully logged in with mnemonic phrase!',
@@ -71,19 +81,36 @@ const Login: React.FC = () => {
       // Проверяем, является ли ввод приватным ключом
       if (trimmedInput.startsWith('0x') && trimmedInput.length === 66) {
         try {
-          // Пробуем создать кошелек из приватного ключа
           const wallet = new ethers.Wallet(trimmedInput);
-          
-          // Сохраняем приватный ключ
+          const avatar = await getAvatarFromAddress(wallet.address);
+
+          const newAccount: WalletAccount = {
+            id: Date.now().toString(),
+            name: 'Account 1',
+            privateKey: trimmedInput,
+            address: wallet.address,
+            avatar: avatar
+          };
+
+          // Сохраняем все необходимые данные
+          localStorage.setItem('walletAccounts', JSON.stringify([newAccount]));
+          localStorage.setItem('currentAccount', JSON.stringify(newAccount));
           localStorage.setItem('walletPrivateKey', trimmedInput);
-          localStorage.setItem('walletMnemonic', ''); // Очищаем мнемонику
+          localStorage.setItem('walletAddress', wallet.address); // Добавляем сохранение адреса
+          localStorage.setItem('walletAvatar', avatar);
+
+          // Устанавливаем начальные настройки сети
+          const isTestnet = localStorage.getItem('isTestnet') === 'true';
+          const networks = isTestnet ? TESTNETS : MAINNETS;
+          const defaultNetwork = Object.values(networks)[0];
+          localStorage.setItem('userProvider', defaultNetwork.rpc);
+          localStorage.setItem('networks', JSON.stringify(networks));
 
           message.success({
             content: 'Successfully logged in with private key!',
             duration: 1.5,
           });
           
-          localStorage.setItem('walletAvatar', "");
           navigate('/homeBalance');
           return;
         } catch (error) {
