@@ -24,19 +24,21 @@ const Settings: React.FC = () => {
                 <div className="content colums-settings">
 
                     <div className="main-settings">
-                        <Button 
-                        className="mainButton-settings"
-                        onClick={() => navigate('/networks')}
+                        <Button
+                            className="mainButton-settings"
+                            onClick={() => navigate('/networks')}
                         ><h3 className="h3-settings">Networks</h3>
                         </Button>
-                        <Button 
-                        className="mainButton-settings"
-                        onClick={() => navigate('/backup')}
+                        <Button className="mainButton-settings"
+                            onClick={() => navigate('/addNetwork')}
+                        ><h3 className="h3-settings">Add Network</h3>
+                        </Button>
+                        <Button
+                            className="mainButton-settings"
+                            onClick={() => navigate('/backup')}
                         ><h3 className="h3-settings">Backup Wallet</h3>
                         </Button>
-                        <Button className="mainButton-settings"
-                        ><h3 className="h3-settings">soon...</h3>
-                        </Button>
+
                     </div>
 
                 </div>

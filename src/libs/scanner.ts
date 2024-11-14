@@ -1,12 +1,28 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
 import { MAINNETS, TESTNETS, ERC20_ABI } from './constants';
-import { TokenBalance, Networks, NFTBalance } from './types';
+import { TokenBalance, Networks, NFTBalance, NetworkConfig } from './types';
 
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const RETRY_DELAY = 2000;
 const MAX_RETRIES = 5;
 const CHUNK_SIZE = 50;
+const DELAY_BETWEEN_REQUESTS = 1000; // 1 секунда между запросами
+const COINGECKO_PROXY_URL = 'https://api.coingecko.com/api/v3';
+const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+
+interface CoinGeckoResponse {
+    image: {
+        small: string;
+        large: string;
+        thumb: string;
+    };
+}
+
+interface PriceCacheItem {
+    price: number;
+    timestamp: number;
+}
 
 export class MultiChainWalletScanner {
     private privateKey: string;
@@ -16,13 +32,37 @@ export class MultiChainWalletScanner {
     private tokenIdMapCache: { [symbol: string]: string } | null = null;
     private lastApiCall: number = 0;
     private tokenImageCache: { [symbol: string]: string } = {};
+    private lastRequestTime: { [network: string]: number } = {};
+    private priceCache: { [symbol: string]: PriceCacheItem } = {};
+
+    private getCurrentNetworks(): Networks {
+        const isTestnet = localStorage.getItem('isTestnet') === 'true';
+        const baseNetworks = isTestnet ? TESTNETS : MAINNETS;
+        
+        // Получаем пользовательские сети
+        const storedCustomNetworks = localStorage.getItem('customNetworks');
+        const customNetworks = storedCustomNetworks ? JSON.parse(storedCustomNetworks) : {};
+        
+        // Фильтруем сети в зависимости от режима (testnet/mainnet)
+        const filteredCustomNetworks = Object.entries(customNetworks)
+            .filter(([_, network]) => {
+                const chainId = (network as NetworkConfig).chainId;
+                return isTestnet ? chainId > 0 && chainId < 1000000 : chainId >= 1000000;
+            })
+            .reduce((acc, [key, network]) => ({ ...acc, [key]: network }), {});
+
+        // Объединяем базовые и пользовательские сети
+        return {
+            ...baseNetworks,
+            ...filteredCustomNetworks
+        };
+    }
 
     constructor(
         privateKey: string,
         networks: Networks = MAINNETS
     ) {
         this.privateKey = privateKey;
-
         localStorage.removeItem('networks');
 
         const storedNetworks = localStorage.getItem('networks');
@@ -31,7 +71,7 @@ export class MultiChainWalletScanner {
         if (storedNetworks) {
             this.networks = JSON.parse(storedNetworks);
         } else {
-            this.networks = isTestnet ? TESTNETS : MAINNETS;
+            this.networks = this.getCurrentNetworks();
             localStorage.setItem('networks', JSON.stringify(this.networks));
         }
 
@@ -79,27 +119,33 @@ export class MultiChainWalletScanner {
         }
     }
 
-    private async waitForRateLimit(): Promise<void> {
+    private async waitForRateLimit(networkId: string): Promise<void> {
         const now = Date.now();
-        const timeSinceLastCall = now - this.lastApiCall;
-
-        if (timeSinceLastCall < RETRY_DELAY) {
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY - timeSinceLastCall));
+        const lastRequest = this.lastRequestTime[networkId] || 0;
+        const timeSinceLastRequest = now - lastRequest;
+        
+        if (timeSinceLastRequest < DELAY_BETWEEN_REQUESTS) {
+            await new Promise(resolve => 
+                setTimeout(resolve, DELAY_BETWEEN_REQUESTS - timeSinceLastRequest)
+            );
         }
-        this.lastApiCall = Date.now();
+        
+        this.lastRequestTime[networkId] = Date.now();
     }
 
     private async retryRequest<T>(
-        requestFn: () => Promise<T>,
+        networkId: string,
+        request: () => Promise<T>,
         retries: number = MAX_RETRIES
     ): Promise<T> {
         try {
-            await this.waitForRateLimit();
-            return await requestFn();
+            await this.waitForRateLimit(networkId);
+            return await request();
         } catch (error: any) {
-            if (retries > 0 && error.response?.status === 429) {
-                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                return this.retryRequest(requestFn, retries - 1);
+            if (retries > 0 && (error.status === 429 || error.code === 'RATE_LIMIT')) {
+                console.log(`Rate limit hit for ${networkId}, retrying in ${DELAY_BETWEEN_REQUESTS}ms...`);
+                await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
+                return this.retryRequest(networkId, request, retries - 1);
             }
             throw error;
         }
@@ -187,26 +233,13 @@ export class MultiChainWalletScanner {
         try {
             const walletAddress = wallet.address;
 
-            const nativeBalance = await provider.getBalance(walletAddress);
+            // Получаем баланс нативного токена
+            const nativeBalance = await this.retryRequest(networkId, () =>
+                provider.getBalance(walletAddress)
+            );
             const nativeBalanceFormatted = ethers.formatEther(nativeBalance);
 
-            const tokensResponse = await axios.get(network.scanner, {
-                params: {
-                    module: 'account',
-                    action: 'tokentx',
-                    address: walletAddress,
-                    sort: 'desc',
-                    apikey: network.scannerKey
-                }
-            });
-
-            const uniqueTokens = new Set<string>();
-            if (tokensResponse.data.result) {
-                tokensResponse.data.result.forEach((tx: any) => {
-                    uniqueTokens.add(tx.contractAddress);
-                });
-            }
-
+            // Инициализируем массив с нативным токеном
             const tokenBalances: TokenBalance[] = [{
                 symbol: network.symbol,
                 name: network.name,
@@ -217,50 +250,100 @@ export class MultiChainWalletScanner {
                 networkName: network.name
             }];
 
-            for (const tokenAddress of uniqueTokens) {
+            // Проверяем наличие сканера для сети
+            if (network.scanner && network.scannerKey) {
                 try {
-                    if (!(await this.isValidContract(provider, tokenAddress))) {
-                        continue;
-                    }
+                    console.log(`Scanning network ${networkId} for tokens...`);
+                    const tokensResponse = await axios.get(network.scanner, {
+                        params: {
+                            module: 'account',
+                            action: 'tokentx',
+                            address: walletAddress,
+                            sort: 'desc',
+                            apikey: network.scannerKey
+                        }
+                    });
 
-                    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, wallet);
+                    console.log(`Response from ${networkId} scanner:`, {
+                        status: tokensResponse.data.status,
+                        message: tokensResponse.data.message,
+                        resultCount: tokensResponse.data.result ? tokensResponse.data.result.length : 0
+                    });
 
-                    if (!(await this.isERC20Contract(contract))) {
-                        continue;
-                    }
-
-                    const [balance, decimals, symbol, name] = await Promise.all([
-                        contract.balanceOf(walletAddress).catch(() => null),
-                        contract.decimals().catch(() => null),
-                        contract.symbol().catch(() => null),
-                        contract.name().catch(() => null)
-                    ]);
-
-                    if (!balance || decimals === null || !symbol || !name) {
-                        continue;
-                    }
-
-                    const formattedBalance = ethers.formatUnits(balance, decimals);
-
-                    if (!(await this.isLegitToken(contract, formattedBalance, symbol, name))) {
-                        continue;
-                    }
-
-                    if (parseFloat(formattedBalance) > 0) {
-                        tokenBalances.push({
-                            symbol: String(symbol),
-                            name: String(name),
-                            balance: formattedBalance,
-                            address: tokenAddress,
-                            decimals: Number(decimals),
-                            network: networkId,
-                            networkName: network.name
+                    if (tokensResponse.data && 
+                        tokensResponse.data.status === '1' && 
+                        Array.isArray(tokensResponse.data.result)) {
+                        
+                        if (tokensResponse.data.result.length === 0) {
+                            console.log(`No token transactions found for network ${networkId} - wallet is new or empty`);
+                        } else {
+                            console.log(`Found ${tokensResponse.data.result.length} token transactions in ${networkId}`);
+                        }
+                        
+                        // Создаем Set для уникальных адресов токенов
+                        const uniqueTokens = new Set<string>();
+                        tokensResponse.data.result.forEach((tx: any) => {
+                            if (tx.contractAddress) {
+                                uniqueTokens.add(tx.contractAddress);
+                            }
                         });
+
+                        // Обрабатываем каждый уникальный токен
+                        for (const tokenAddress of uniqueTokens) {
+                            try {
+                                const isValid = await this.retryRequest(networkId, () =>
+                                    this.isValidContract(provider, tokenAddress)
+                                );
+                                if (!isValid) continue;
+
+                                const contract = new ethers.Contract(tokenAddress, ERC20_ABI, wallet);
+
+                                const isERC20 = await this.retryRequest(networkId, () =>
+                                    this.isERC20Contract(contract)
+                                );
+                                if (!isERC20) continue;
+
+                                const [balance, decimals, symbol, name] = await Promise.all([
+                                    contract.balanceOf(walletAddress).catch(() => null),
+                                    contract.decimals().catch(() => null),
+                                    contract.symbol().catch(() => null),
+                                    contract.name().catch(() => null)
+                                ]);
+
+                                if (!balance || decimals === null || !symbol || !name) {
+                                    continue;
+                                }
+
+                                const formattedBalance = ethers.formatUnits(balance, decimals);
+
+                                if (!(await this.isLegitToken(contract, formattedBalance, symbol, name))) {
+                                    continue;
+                                }
+
+                                if (parseFloat(formattedBalance) > 0) {
+                                    tokenBalances.push({
+                                        symbol: String(symbol),
+                                        name: String(name),
+                                        balance: formattedBalance,
+                                        address: tokenAddress,
+                                        decimals: Number(decimals),
+                                        network: networkId,
+                                        networkName: network.name
+                                    });
+                                }
+                            } catch (error) {
+                                console.error(`Error processing token ${tokenAddress} on ${networkId}:`, error);
+                                continue;
+                            }
+                        }
+                    } else {
+                        console.warn(`No token transactions found for network ${networkId}. Response:`, tokensResponse.data);
                     }
                 } catch (error) {
-                    console.error(`Skipping token ${tokenAddress} on ${networkId}: ${error}`);
-                    continue;
+                    console.log(`No scanner available for network ${networkId}, showing only native token`);
                 }
+            } else {
+                console.log(`Network ${networkId} doesn't have scanner configuration, showing only native token`);
             }
 
             return tokenBalances;
@@ -363,9 +446,11 @@ export class MultiChainWalletScanner {
             const idMap = await this.getTokenIdMap();
             const tokenId = idMap[symbol.toUpperCase()];
             if (tokenId) {
-                const response = await this.retryRequest(() =>
-                    axios.get(`${COINGECKO_BASE_URL}/coins/${tokenId}`)
+                const response = await this.retryRequest<{ data: CoinGeckoResponse }>(
+                    'coingecko', // используем специальный ID для CoinGecko
+                    () => axios.get<CoinGeckoResponse>(`${COINGECKO_BASE_URL}/coins/${tokenId}`)
                 );
+                
                 const imageUrl = response.data.image.small;
                 this.tokenImageCache[cacheKey] = imageUrl;
                 return imageUrl;
@@ -376,78 +461,106 @@ export class MultiChainWalletScanner {
         return undefined;
     }
 
+    private isPriceCacheValid(symbol: string): boolean {
+        const cacheItem = this.priceCache[symbol];
+        if (!cacheItem) return false;
+        
+        const now = Date.now();
+        return (now - cacheItem.timestamp) < PRICE_CACHE_DURATION;
+    }
+
     async getTokenPrices(tokenBalances: TokenBalance[]): Promise<{ [key: string]: number }> {
+        const symbols = [...new Set(tokenBalances.map(token => {
+            switch (token.network) {
+                case 'bscTestnet':
+                    return 'BNB';
+                case 'sepolia':
+                    return 'ETH';
+                default:
+                    return token.symbol;
+            }
+        }))];
+
         try {
-            const symbols = [...new Set(tokenBalances.map(token => {
-                // Нормализуем символы для всех сетей
-                switch (token.network) {
-                    case 'bscTestnet':
-                        return 'BNB';
-                    case 'sepolia':
-                        return 'ETH';
-                    default:
-                        return token.symbol;
-                }
-            }))];
-
-            const idMap = await this.getTokenIdMap();
             const prices: { [key: string]: number } = {};
+            const symbolsToFetch = symbols.filter(symbol => !this.isPriceCacheValid(symbol));
 
-            for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-                const symbolsChunk = symbols.slice(i, i + CHUNK_SIZE);
-                const tokenIds = symbolsChunk
-                    .map(symbol => idMap[symbol.toUpperCase()])
-                    .filter(id => id)
-                    .join(',');
+            if (symbolsToFetch.length > 0) {
+                const idMap = await this.getTokenIdMap();
+                
+                for (let i = 0; i < symbolsToFetch.length; i += CHUNK_SIZE) {
+                    const symbolsChunk = symbolsToFetch.slice(i, i + CHUNK_SIZE);
+                    const tokenIds = symbolsChunk
+                        .map(symbol => idMap[symbol.toUpperCase()])
+                        .filter(id => id)
+                        .join(',');
 
-                if (!tokenIds) continue;
+                    if (!tokenIds) continue;
 
-                try {
-                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                    try {
+                        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
 
-                    const response = await axios.get(`${COINGECKO_BASE_URL}/simple/price`, {
-                        params: {
-                            ids: tokenIds,
-                            vs_currencies: 'usd'
-                        }
-                    });
-
-                    for (const symbol of symbolsChunk) {
-                        const id = idMap[symbol.toUpperCase()];
-                        if (id && response.data[id]) {
-                            const price = response.data[id].usd;
-                            // Сохраняем цену для всех вариантов символа
-                            prices[symbol] = price;
-
-                            // Для BNB сохраняем цену под всеми возможными символами
-                            if (symbol === 'BNB') {
-                                prices['BNB'] = price;
-                                prices['tBNB'] = price;
-                                prices['TBNB'] = price;
+                        const response = await this.retryRequest('coingecko', async () => {
+                            const result = await fetch(`${COINGECKO_PROXY_URL}/simple/price?ids=${tokenIds}&vs_currencies=usd`);
+                            if (!result.ok) {
+                                throw new Error(`HTTP error! status: ${result.status}`);
                             }
+                            return result.json();
+                        });
 
-                            // Для ETH сохраняем цену под всеми возможными символами
-                            if (symbol === 'ETH') {
-                                prices['ETH'] = price;
-                                prices['sepETH'] = price;
-                                prices['SEPOLIA'] = price;
+                        for (const symbol of symbolsChunk) {
+                            const id = idMap[symbol.toUpperCase()];
+                            if (id && response[id]) {
+                                const price = response[id].usd;
+                                this.priceCache[symbol] = {
+                                    price,
+                                    timestamp: Date.now()
+                                };
+                                prices[symbol] = price;
+
+                                if (symbol === 'BNB') {
+                                    prices['BNB'] = price;
+                                    prices['tBNB'] = price;
+                                    prices['TBNB'] = price;
+                                }
+
+                                if (symbol === 'ETH') {
+                                    prices['ETH'] = price;
+                                    prices['sepETH'] = price;
+                                    prices['SEPOLIA'] = price;
+                                }
                             }
                         }
+                    } catch (error: any) {
+                        console.error(`Error fetching prices for chunk ${i}:`, error);
+                        // Используем кэшированные цены, если они есть
+                        symbolsChunk.forEach(symbol => {
+                            if (this.priceCache[symbol]) {
+                                prices[symbol] = this.priceCache[symbol].price;
+                            }
+                        });
                     }
-                } catch (error: any) {
-                    if (error.response?.status === 429) {
-                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
-                        i -= CHUNK_SIZE;
-                        continue;
-                    }
-                    console.error(`Error fetching prices for chunk ${i}:`, error);
                 }
             }
+
+            // Добавляем кэшированные цены
+            symbols.forEach(symbol => {
+                if (this.isPriceCacheValid(symbol)) {
+                    prices[symbol] = this.priceCache[symbol].price;
+                }
+            });
 
             return prices;
         } catch (error) {
             console.error('Error getting token prices:', error);
-            return {};
+            // Возвращаем кэшированные цены в случае ошибки
+            const cachedPrices: { [key: string]: number } = {};
+            symbols.forEach(symbol => {
+                if (this.priceCache[symbol]) {
+                    cachedPrices[symbol] = this.priceCache[symbol].price;
+                }
+            });
+            return cachedPrices;
         }
     }
 
@@ -519,12 +632,16 @@ export class MultiChainWalletScanner {
             balances.map(async (token) => {
                 const isNativeToken = token.address === 'native';
                 const imageUrl = await this.getTokenImage(token.symbol, isNativeToken, token.network);
+                
+                // Добавляем дополнительную информацию о сети
+                const network = this.networks[token.network];
                 return {
                     ...token,
-                    networkName: this.networks[token.network].name,
+                    networkName: network.name,
                     price: prices[token.symbol] || 0,
                     imageUrl,
-                    networkImageUrl: this.networks[token.network].imageUrl
+                    networkImageUrl: network.imageUrl,
+                    explorer: network.explorer || ''
                 };
             })
         );

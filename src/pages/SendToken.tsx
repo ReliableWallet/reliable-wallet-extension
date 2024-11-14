@@ -3,7 +3,7 @@ import { Input, Select, Button, message } from 'antd';
 import { ethers, JsonRpcProvider, formatUnits } from 'ethers';
 import { useNavigate } from 'react-router-dom';
 import { ERC20_ABI, TESTNETS, MAINNETS } from '../libs/constants';
-import { TokenBalance } from '../libs/types';
+import { TokenBalance, NetworkConfig } from '../libs/types';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from '../libs/IconButton';
 import { MultiChainWalletScanner } from '../libs/scanner';
@@ -236,15 +236,25 @@ const SendToken: React.FC = () => {
     };
 
     // Функция для получения правильной сети на основе выбранного токена
-    const getNetworkForToken = (tokenNetwork: string) => {
+    const getNetworkForToken = (tokenNetwork: string): NetworkConfig => {
         const networks = isTestnet ? TESTNETS : MAINNETS;
+        
+        let networkKey: string;
+        
         if (tokenNetwork.includes('bsc')) {
-            return networks.bscTestnet || networks.bsc;
+            networkKey = isTestnet ? 'bscTestnet' : 'bsc';
+        } else if (tokenNetwork.includes('arbitrum')) {
+            networkKey = 'arbitrum';
+        } else {
+            networkKey = isTestnet ? 'sepolia' : 'ethereum';
         }
-        if (tokenNetwork.includes('arbitrum')) {
-            return networks.arbitrum;
+        
+        const network = networks[networkKey] as NetworkConfig;
+        if (!network) {
+            throw new Error(`Network configuration not found for ${networkKey}`);
         }
-        return networks.sepolia || networks.ethereum;
+        
+        return network;
     };
 
     // Обновляем провайдер при выборе токена
@@ -253,14 +263,13 @@ const SendToken: React.FC = () => {
         const [_, network] = value.split('-');
         const networkConfig = getNetworkForToken(network);
         
-        if (networkConfig) {
+        if (networkConfig && networkConfig.rpc) {
             const newProvider = new JsonRpcProvider(networkConfig.rpc);
             setProvider(newProvider);
             
             if (wallet) {
                 const newWallet = new ethers.Wallet(wallet.privateKey, newProvider);
                 setWallet(newWallet);
-                // Обновляем балансы после смены сети
                 await updateBalances();
             }
         }

@@ -28,7 +28,8 @@ module.exports = {
             "assert": require.resolve("assert/"),
             "buffer": require.resolve("buffer/"),
             "process": require.resolve("process/browser"), // Полифил для process
-        }
+        },
+        extensions: ['.ts', '.tsx', '.js', '.json']
     },
     plugins: [
         new webpack.ProvidePlugin({

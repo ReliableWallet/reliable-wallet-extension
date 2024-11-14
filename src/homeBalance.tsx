@@ -99,30 +99,31 @@ const WalletInfo: React.FC = () => {
   }
 
   // Функция для проверки аланса ETH
-  async function checkBalance() {
+  const checkBalance = async () => {
     setLoading(true);
     try {
-      if (!privateKey) {
-        throw new Error("Private key not found");
-      }
+        if (!privateKey) {
+            throw new Error("Private key not found");
+        }
 
-      const scanner = new MultiChainWalletScanner(privateKey);
-      const enrichedTokens = await scanner.getEnrichedTokenBalances();
-      setTokens(enrichedTokens);
-      localStorage.setItem('tokens', JSON.stringify(enrichedTokens));
+        // Создаем новый экземпляр сканера с обновленным списком сетей
+        const scanner = new MultiChainWalletScanner(privateKey);
+        const enrichedTokens = await scanner.getEnrichedTokenBalances();
+        setTokens(enrichedTokens);
+        localStorage.setItem('tokens', JSON.stringify(enrichedTokens));
 
-      const totalUSD = enrichedTokens.reduce((sum, token) => {
-        const balance = parseFloat(token.balance as string);
-        return sum + (token.price || 0) * balance;
-      }, 0);
+        const totalUSD = enrichedTokens.reduce((sum, token) => {
+            const balance = parseFloat(token.balance as string);
+            return sum + (token.price || 0) * balance;
+        }, 0);
 
-      setTotalBalanceUSD(totalUSD.toFixed(2));
+        setTotalBalanceUSD(totalUSD.toFixed(2));
     } catch (error) {
-      console.error("Error checking balance:", error);
+        console.error("Error checking balance:", error);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }
+  };
 
   // Функция для копирования адреса
   async function copyToClipboard() {

@@ -12,6 +12,7 @@ import Networks from './settingsList/networks';
 import SendToken from './pages/SendToken';
 import SwapToken from './pages/SwapToken';
 import Backup from './settingsList/backup';
+import AddNetworkPage from './settingsList/addNetwork';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
@@ -30,6 +31,7 @@ root.render(
         <Route path="/send" element={<SendToken />} />
         <Route path="/swap" element={<SwapToken />} />
         <Route path="/backup" element={<Backup />} />
+        <Route path="/addNetwork" element={<AddNetworkPage />} />
       </Routes>
     </HashRouter>
   </React.StrictMode>
