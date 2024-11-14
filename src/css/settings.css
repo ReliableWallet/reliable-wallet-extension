@@ -9,8 +9,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 80%;
-    text-align: center;
+    width: 100%;
+    align-items: center;
     margin: 10px 0px;
 }
 
@@ -21,7 +21,8 @@
     background: transparent !important;
     color: white !important;
     padding: 0px;
-    max-height: 48px;
+    width: 80%;
+    /* max-height: 48px; */
 }
 
 .mainButton-settings:hover {
