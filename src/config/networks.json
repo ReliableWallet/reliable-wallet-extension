@@ -71,7 +71,7 @@
     "bscTestnet": {
       "name": "BSC Testnet",
       "symbol": "BNB",
-      "rpc": "https://data-seed-prebsc-2-s1.binance.org:8545",
+      "rpc": "https://bsc-testnet-rpc.publicnode.com",
       "scanner": "https://api-testnet.bscscan.com/api",
       "scannerKey": "TVGY5PZ4QGVMVW2BJCW2AP4SYVUMX49I8J",
       "currency": "tBNB",

@@ -76,7 +76,7 @@ const WalletEntry: React.FC = () => {
                             >
                                 Log in
                             </Button>
-                            <Button
+                            {/* <Button
                                 className="customButton"
                                 color="default"
                                 variant="filled"
@@ -85,7 +85,7 @@ const WalletEntry: React.FC = () => {
                                 block
                             >
                                 test
-                            </Button>
+                            </Button> */}
                         </Flex>
                     </div>
                 </div>
