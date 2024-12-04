@@ -48,7 +48,7 @@ const WalletEntry: React.FC = () => {
     return (
         <div className="container">
             <header className="header">
-                <h1>Welcome to QURWallet</h1>
+                <h1>Welcome to Reliable Wallet</h1>
             </header>
 
             <div className="body">

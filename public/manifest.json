@@ -1,12 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "QURWallet",
+  "name": "Reliable Wallet",
   "version": "1.0",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
@@ -29,6 +32,6 @@
     "<all_urls>"
   ],
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; connect-src 'self' https://api.arbiscan.io https://api.bscscan.com https://api.coingecko.com https://api.etherscan.io https://arb1.arbitrum.io https://bsc-dataseed1.binance.org https://eth-mainnet.public.blastapi.io https://eth-sepolia.public.blastapi.io https://bsc-testnet-rpc.publicnode.com https://api-sepolia.etherscan.io https://api-testnet.bscscan.com https://min-api.cryptocompare.com https://polygon.llamarpc.com https://optimism.llamarpc.com https://*.blastapi.io; font-src 'self'; frame-src 'self'; img-src 'self' data: https://coin-images.coingecko.com https://cryptologos.cc; manifest-src 'self'; media-src 'self'; worker-src 'none';"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.polygonscan.com https://*.etherscan.io https://*.optimistic.etherscan.io https://api.arbiscan.io https://api.bscscan.com https://api.coingecko.com https://api.etherscan.io https://arb1.arbitrum.io https://bsc-dataseed1.binance.org https://eth-mainnet.public.blastapi.io https://eth-sepolia.public.blastapi.io https://bsc-testnet-rpc.publicnode.com https://api-sepolia.etherscan.io https://api-testnet.bscscan.com https://min-api.cryptocompare.com https://polygon.llamarpc.com https://optimism.llamarpc.com https://*.blastapi.io https://*.infura.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://coin-images.coingecko.com https://cryptologos.cc https://*.polygonscan.com https://*.etherscan.io;"
   }
 }

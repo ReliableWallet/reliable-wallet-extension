@@ -9,6 +9,7 @@ import './css/login.css';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from './libs/IconButton';
 import { TESTNETS, MAINNETS } from './libs/constants';
+import LegalCheckboxes from './components/LegalCheckboxes';
 
 const { TextArea } = Input;
 
@@ -16,6 +17,10 @@ const Login: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [legalChecked, setLegalChecked] = useState({
+    privacy: false,
+    terms: false
+  });
 
   const getAvatarFromAddress = async (address: string): Promise<string> => {
     let avatarUrl = "";
@@ -31,11 +36,16 @@ const Login: React.FC = () => {
   };
 
   const validateAndLogin = async () => {
+    if (!legalChecked.privacy || !legalChecked.terms) {
+      message.error('Please agree to Privacy Policy and Terms of Use');
+      return;
+    }
+
     setLoading(true);
     try {
       const trimmedInput = input.trim();
       
-      // Проверяем, явл��ется ли ввод мнемонической фразой
+      // Проверяем, явлется ли ввод мнемонической фразой
       const words = trimmedInput.split(/\s+/);
       if (words.length === 12) {
         try {
@@ -160,6 +170,11 @@ const Login: React.FC = () => {
             placeholder="Mnemonic phrase or private key"
             className='input-field'
           />
+
+          <LegalCheckboxes
+            onChange={(privacy, terms) => setLegalChecked({ privacy, terms })}
+          />
+
           <Button
             type="primary"
             onClick={validateAndLogin}

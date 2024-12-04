@@ -8,36 +8,41 @@ module.exports = {
         path: path.resolve(__dirname, 'build'),
     },
     mode: 'production',
+    target: 'web',
+    experiments: {
+        topLevelAwait: true
+    },
     module: {
         rules: [
             {
-                test: /\.(js|jsx|ts|tsx)$/,
+                test: /\.js$/,
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env'],
-                    },
-                },
-            },
-        ],
+                        presets: [
+                            ['@babel/preset-env', { targets: { chrome: '91' } }]
+                        ]
+                    }
+                }
+            }
+        ]
     },
     resolve: {
         fallback: {
             "stream": require.resolve("stream-browserify"),
-            "assert": require.resolve("assert/"),
+            "crypto": require.resolve("crypto-browserify"),
             "buffer": require.resolve("buffer/"),
-            "process": require.resolve("process/browser"), // Полифил для process
-        },
-        extensions: ['.ts', '.tsx', '.js', '.json']
+            "assert": require.resolve("assert/"),
+            "os": false,
+            "fs": false,
+            "path": false
+        }
     },
     plugins: [
         new webpack.ProvidePlugin({
-            process: 'process/browser', // Определяем глобальный process
-            Buffer: ['buffer', 'Buffer'], // Определяем глобальный Buffer
-        }),
-    ],
-    externals: {
-        chrome: 'chrome',
-      }
+            Buffer: ['buffer', 'Buffer'],
+            process: 'process/browser'
+        })
+    ]
 };

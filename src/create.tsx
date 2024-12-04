@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Row, Col, Input, Alert } from 'antd';
+import { Button, Row, Col, Input, Alert, message } from 'antd';
 import { ExclamationCircleFilled } from '@ant-design/icons';
 
 import './css/create.css';
 import { FaArrowLeftLong } from 'react-icons/fa6';
 import IconButton from './libs/IconButton';
+import LegalCheckboxes from './components/LegalCheckboxes';
+import { MAINNETS, TESTNETS } from './libs/constants';
 
 const Create: React.FC = () => {
   const [walletInfo, setWalletInfo] = useState<any>(null);
@@ -16,6 +18,14 @@ const Create: React.FC = () => {
   const [userInputs, setUserInputs] = useState<string[]>([]);
   const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [isAllCorrect, setIsAllCorrect] = useState<boolean>(false);
+  const [legalChecked, setLegalChecked] = useState({
+    privacy: false,
+    terms: false
+  });
+  const [initialLegalChecked, setInitialLegalChecked] = useState({
+    privacy: false,
+    terms: false
+  });
 
   const navigate = useNavigate();
 
@@ -27,28 +37,54 @@ const Create: React.FC = () => {
     setIsButtonClicked(true);
 
     if (typeof chrome !== "undefined" && chrome.runtime) {
-      chrome.runtime.sendMessage({ action: "generateWallet" }, function (response) {
-        if (response.success) {
-          setWalletInfo(response.wallet);
-          setError(null);
-        } else {
-          setError(response.error);
-          setWalletInfo(null);
-        }
-      });
-    } else {
-      import("./background.js").then((module: typeof import("./background.js")) => {
-        module.generateWallet().then((wallet) => {
-          if (wallet) {
-            setWalletInfo(wallet);
+      try {
+        chrome.runtime.sendMessage({ action: "generateWallet" }, function(response) {
+          if (chrome.runtime.lastError) {
+            console.error('Runtime error:', chrome.runtime.lastError);
+            setError(chrome.runtime.lastError.message);
+            return;
+          }
+          
+          if (response && response.success) {
+            setWalletInfo(response.wallet);
+            localStorage.setItem('walletMnemonic', response.wallet.mnemonic);
+            localStorage.setItem('walletPrivateKey', response.wallet.privateKey);
+            localStorage.setItem('walletAddress', response.wallet.address);
             setError(null);
           } else {
+            setError(response?.error || "Failed to generate wallet");
             setWalletInfo(null);
           }
-        }).catch((error) => {
-          setWalletInfo(null);
         });
+      } catch (error) {
+        console.error('Error:', error);
+        setError(error.message);
+        setWalletInfo(null);
+      }
+    } else {
+      // Fallback для разработки
+      import("ethers").then((ethers) => {
+        try {
+          const wallet = ethers.Wallet.createRandom();
+          const walletInfo = {
+            mnemonic: wallet.mnemonic.phrase,
+            privateKey: wallet.privateKey,
+            publicKey: wallet.publicKey,
+            address: wallet.address
+          };
+          setWalletInfo(walletInfo);
+          localStorage.setItem('walletMnemonic', walletInfo.mnemonic);
+          localStorage.setItem('walletPrivateKey', walletInfo.privateKey);
+          localStorage.setItem('walletAddress', walletInfo.address);
+          setError(null);
+        } catch (error) {
+          console.error('Error:', error);
+          setError(error.message);
+          setWalletInfo(null);
+        }
       }).catch((error) => {
+        console.error('Import error:', error);
+        setError(error.message);
         setWalletInfo(null);
       });
     }
@@ -90,41 +126,86 @@ const Create: React.FC = () => {
   };
 
   const handleNextAfterTest = () => {
-    localStorage.setItem('walletMnemonic', walletInfo.mnemonic);
-    console.log("Test completed successfully!");
+    if (!legalChecked.privacy || !legalChecked.terms) {
+      message.error('Please agree to Privacy Policy and Terms of Use');
+      return;
+    }
 
-    localStorage.setItem('walletAvatar', "");
+    if (walletInfo) {
+      localStorage.setItem('walletMnemonic', walletInfo.mnemonic);
+      localStorage.setItem('walletPrivateKey', walletInfo.privateKey);
+      localStorage.setItem('walletAddress', walletInfo.address);
+      localStorage.setItem('walletAvatar', "");
 
-    navigate("/homeBalance")
+      const newAccount = {
+        id: Date.now().toString(),
+        name: 'Account 1',
+        privateKey: walletInfo.privateKey,
+        mnemonic: walletInfo.mnemonic,
+        address: walletInfo.address,
+        avatar: ""
+      };
+      localStorage.setItem('walletAccounts', JSON.stringify([newAccount]));
+      localStorage.setItem('currentAccount', JSON.stringify(newAccount));
+
+      const isTestnet = localStorage.getItem('isTestnet') === 'true';
+      const networks = isTestnet ? TESTNETS : MAINNETS;
+      const defaultNetwork = Object.values(networks)[0];
+      localStorage.setItem('userProvider', defaultNetwork.rpc);
+      localStorage.setItem('networks', JSON.stringify(networks));
+
+      navigate("/homeBalance");
+    } else {
+      message.error('Wallet generation error');
+    }
   };
 
   return (
     <div className="container">
       <header className="header">
-      <IconButton className="back-icon" style={{}} icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} onClick={() => navigate(-1)} />
-
-        <h1 className='h1-wallet-gen'>Create QURWallet</h1>
+        <IconButton 
+          className="back-icon" 
+          icon={<FaArrowLeftLong style={{ fill: 'pink' }} size={24} />} 
+          onClick={() => navigate(-1)} 
+        />
+        <h1 className='h1-wallet-gen'>Create Wallet</h1>
       </header>
 
       <div className="body">
         <div className="content">
-          <div className='content-create'>
-            {isButtonClicked && (<Alert message="Save that words and dont show for others" className='alert-gen' style={buttonStyles} icon={<ExclamationCircleFilled style={{ color: 'lightgrey' }} />} showIcon />)}
-            {!isButtonClicked && (<Button className='customButton customButtonGen' color="default" variant="filled" style={buttonStyles} onClick={generateWallet}>Generate Wallet</Button>)}
-          </div>
-          {error && <p className="error">Error: {error}</p>}
-
-          {walletInfo && (
-            <div className='wallet-info'>
-              <p className="p-mnemonic">Mnemonic:</p>
-              <PhraseDisplay
-                mnemonic={walletInfo.mnemonic}
-                disabledIndexes={disabledIndexes}
-                userInputs={userInputs}
-                handleInputChange={handleInputChange}
-                isTestMode={isTestMode}
+          {!isButtonClicked ? (
+            <div className='content-create'>
+              <LegalCheckboxes
+                onChange={(privacy, terms) => setInitialLegalChecked({ privacy, terms })}
               />
-              {isButtonClicked && !isTestMode && (
+              <Button 
+                className='customButton customButtonGen' 
+                color="default" 
+                variant="filled" 
+                style={buttonStyles} 
+                onClick={generateWallet}
+                disabled={!initialLegalChecked.privacy || !initialLegalChecked.terms}
+              >
+                Generate Wallet
+              </Button>
+            </div>
+          ) : !isTestMode && walletInfo ? (
+            <>
+              <Alert 
+                message="Save that words and dont show for others" 
+                className='alert-gen' 
+                style={buttonStyles} 
+                icon={<ExclamationCircleFilled style={{ color: 'lightgrey' }} />} 
+                showIcon 
+              />
+              <div className='wallet-info'>
+                <PhraseDisplay
+                  mnemonic={walletInfo.mnemonic}
+                  disabledIndexes={disabledIndexes}
+                  userInputs={userInputs}
+                  handleInputChange={handleInputChange}
+                  isTestMode={isTestMode}
+                />
                 <Button
                   className="customButton customButtonCopy"
                   color="default"
@@ -134,8 +215,6 @@ const Create: React.FC = () => {
                 >
                   Copy
                 </Button>
-              )}
-              {isButtonClicked && !isTestMode && (
                 <Button
                   className="customButton customButtonNext"
                   color="default"
@@ -146,20 +225,37 @@ const Create: React.FC = () => {
                 >
                   Next
                 </Button>
-              )}
-              {isTestMode && isAllCorrect && (
-                <Button
-                  className="customButton customButtonNext"
-                  color="default"
-                  variant="filled"
-                  style={buttonStyles}
-                  onClick={handleNextAfterTest}
-                >
-                  Next
-                </Button>
-              )}
-            </div>
-          )}
+              </div>
+            </>
+          ) : isTestMode && walletInfo ? (
+            <>
+              <div className='wallet-info'>
+                <PhraseDisplay
+                  mnemonic={walletInfo.mnemonic}
+                  disabledIndexes={disabledIndexes}
+                  userInputs={userInputs}
+                  handleInputChange={handleInputChange}
+                  isTestMode={isTestMode}
+                />
+                {isAllCorrect && (
+                  <>
+                    <LegalCheckboxes
+                      onChange={(privacy, terms) => setLegalChecked({ privacy, terms })}
+                    />
+                    <Button
+                      className="customButton customButtonNext"
+                      color="default"
+                      variant="filled"
+                      style={buttonStyles}
+                      onClick={handleNextAfterTest}
+                    >
+                      Next
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </div>
@@ -173,8 +269,9 @@ const PhraseDisplay: React.FC<{
   handleInputChange: (index: number, value: string) => void,
   isTestMode: boolean
 }> = ({ mnemonic, disabledIndexes, userInputs, handleInputChange, isTestMode }) => {
-  const words = mnemonic.split(" ");
+  if (!mnemonic) return null;
 
+  const words = mnemonic.split(" ");
   const firstColumnWords = words.slice(0, 6);
   const secondColumnWords = words.slice(6, 12);
 

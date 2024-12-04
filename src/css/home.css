@@ -28,6 +28,7 @@ body {
   height: 100vh;
   background-color: #282c34;
   color: white;
+  scrollbar-width: none;
 
   width: 400px;
   height: 600px;
@@ -83,7 +84,7 @@ body {
 }
 
 h1 {
-  margin: 0;
+  margin: auto 0 auto 0;
   padding: 0;
 }
 

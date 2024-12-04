@@ -53,3 +53,12 @@
     margin-bottom: 30px;
     font-size: 20px
 } */
+
+.legal-checkboxes {
+  margin: 16px 0;
+  width: 100%;
+}
+
+.checkbox-row {
+  margin-bottom: 8px;
+}
