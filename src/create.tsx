@@ -36,58 +36,30 @@ const Create: React.FC = () => {
   const generateWallet = () => {
     setIsButtonClicked(true);
 
-    if (typeof chrome !== "undefined" && chrome.runtime) {
+    import("ethers").then((ethers) => {
       try {
-        chrome.runtime.sendMessage({ action: "generateWallet" }, function(response) {
-          if (chrome.runtime.lastError) {
-            console.error('Runtime error:', chrome.runtime.lastError);
-            setError(chrome.runtime.lastError.message);
-            return;
-          }
-          
-          if (response && response.success) {
-            setWalletInfo(response.wallet);
-            localStorage.setItem('walletMnemonic', response.wallet.mnemonic);
-            localStorage.setItem('walletPrivateKey', response.wallet.privateKey);
-            localStorage.setItem('walletAddress', response.wallet.address);
-            setError(null);
-          } else {
-            setError(response?.error || "Failed to generate wallet");
-            setWalletInfo(null);
-          }
-        });
+        const wallet = ethers.Wallet.createRandom();
+        const walletInfo = {
+          mnemonic: wallet.mnemonic.phrase,
+          privateKey: wallet.privateKey,
+          publicKey: wallet.publicKey,
+          address: wallet.address
+        };
+        setWalletInfo(walletInfo);
+        localStorage.setItem('walletMnemonic', walletInfo.mnemonic);
+        localStorage.setItem('walletPrivateKey', walletInfo.privateKey);
+        localStorage.setItem('walletAddress', walletInfo.address);
+        setError(null);
       } catch (error) {
         console.error('Error:', error);
         setError(error.message);
         setWalletInfo(null);
       }
-    } else {
-      // Fallback для разработки
-      import("ethers").then((ethers) => {
-        try {
-          const wallet = ethers.Wallet.createRandom();
-          const walletInfo = {
-            mnemonic: wallet.mnemonic.phrase,
-            privateKey: wallet.privateKey,
-            publicKey: wallet.publicKey,
-            address: wallet.address
-          };
-          setWalletInfo(walletInfo);
-          localStorage.setItem('walletMnemonic', walletInfo.mnemonic);
-          localStorage.setItem('walletPrivateKey', walletInfo.privateKey);
-          localStorage.setItem('walletAddress', walletInfo.address);
-          setError(null);
-        } catch (error) {
-          console.error('Error:', error);
-          setError(error.message);
-          setWalletInfo(null);
-        }
-      }).catch((error) => {
-        console.error('Import error:', error);
-        setError(error.message);
-        setWalletInfo(null);
-      });
-    }
+    }).catch((error) => {
+      console.error('Import error:', error);
+      setError(error.message);
+      setWalletInfo(null);
+    });
   };
 
   const copyToClipboard = async () => {

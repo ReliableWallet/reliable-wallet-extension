@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "jsx": "react", // или "react-jsx" в зависимости от версии
+      "jsx": "react",
       "esModuleInterop": true,
       "allowSyntheticDefaultImports": true,
       "moduleResolution": "node",
@@ -8,8 +8,8 @@
       "downlevelIteration": true
     },
     "include": [
-      "src", // если твой код в src
-      "custom.d.ts" // путь к файлу с декларациями
+      "src",
+      "custom.d.ts" 
     ]
   }
   
